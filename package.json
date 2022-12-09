@@ -1,0 +1,23 @@
+{
+  "name": "react-lazy",
+  "scripts": {
+    "build": "tsc"
+  },
+  "module": "dist/index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "dependencies": {
+    "prop-types": "^15.8.1",
+    "ramda": "^0.28.0",
+    "react-async": "^10.0.1",
+    "rxjs": "^7.6.0"
+  },
+  "devDependencies": {
+    "@types/ramda": "^0.28.20",
+    "react": "^18.2.0",
+    "@types/react": "^18.0.26"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0"
+  }
+}
