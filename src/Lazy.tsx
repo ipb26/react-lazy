@@ -43,6 +43,7 @@ export function Lazy<D extends {}, P extends {}>(props: LazyProps<D, P>) {
 				{
 					(() => {
 						if (data.status === "rejected") {
+							//TODO React.createElement
 							const OnError = options.onError
 							return <OnError {...props.pass} error={data.reason} />
 						}
