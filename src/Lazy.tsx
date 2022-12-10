@@ -1,5 +1,5 @@
 
-import { ComponentType, Fragment, useContext, useEffect, useRef, useState } from "react"
+import { Component as component, ComponentType, createElement, Fragment, useContext, useEffect, useRef, useState } from "react"
 import { LazyContext, LazyOverrides } from "."
 import { defaultLazyOptions, processLazyOptions, useDelayed } from "./internal"
 
@@ -33,27 +33,21 @@ export function Lazy<D extends {}, P extends {}>(props: LazyProps<D, P>) {
 		if (!options.showLoading || !loadingReady) {
 			return <Fragment />
 		}
-		const OnLoading = options.onLoading
-		return <OnLoading {...props.pass} title={options.loadingTitle} />
+		return createElement(options.onLoading, { ...props.pass, title: options.loadingTitle })
 	}
 	else {
-		const OnReloading = options.onReloading
-		return (
-			<OnReloading {...props.pass} reloading={options.showReloading && isReloading && reloadingReady} title={options.reloadingTitle}>
-				{
-					(() => {
-						if (data.status === "rejected") {
-							//TODO React.createElement
-							const OnError = options.onError
-							return <OnError {...props.pass} error={data.reason} />
-						}
-						else {
-							const Component = props.component
-							return <Component {...props.pass} {...data.value} />
-						}
-					})()
+		return createElement(options.onReloading, {
+			...props.pass,
+			reloading: options.showReloading && isReloading && reloadingReady,
+			title: options.reloadingTitle,
+			children: (() => {
+				if (data.status === "rejected") {
+					return createElement(options.onError, { ...props.pass, error: data.reason })
 				}
-			</OnReloading>
-		)
+				else {
+					return createElement(component, { ...props.pass, ...data.value })
+				}
+			})()
+		})
 	}
 }

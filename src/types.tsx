@@ -1,6 +1,7 @@
 import { keys } from "ramda"
 import { ComponentType, createContext, ReactNode } from "react"
-import { defaultLazyOptions, ValueOrFactory } from "./internal"
+import { ValueOrFactory } from "value-or-factory"
+import { defaultLazyOptions } from "./internal"
 
 export type LoadingProps = { title?: string }
 export type ReloadingProps = { children: ReactNode, title?: string, reloading: boolean }

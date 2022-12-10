@@ -11,12 +11,13 @@
     "prop-types": "^15.8.1",
     "ramda": "^0.28.0",
     "react-async": "^10.0.1",
-    "rxjs": "^7.6.0"
+    "rxjs": "^7.6.0",
+    "value-or-factory": "^0.0.1"
   },
   "devDependencies": {
     "@types/ramda": "^0.28.20",
-    "react": "^18.2.0",
-    "@types/react": "^18.0.26"
+    "@types/react": "^18.0.26",
+    "react": "^18.2.0"
   },
   "peerDependencies": {
     "react": "^18.2.0"
