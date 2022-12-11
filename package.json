@@ -2,16 +2,15 @@
   "name": "react-lazy",
   "license": "MIT",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "watch": "nodemon -e '*' --watch src --watch package.json --watch tsconfig.json --exec yarn build"
   },
   "module": "dist/index.js",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "dependencies": {
-    "prop-types": "^15.8.1",
     "ramda": "^0.28.0",
     "react-async": "^10.0.1",
-    "rxjs": "^7.6.0",
     "value-or-factory": "^0.0.1"
   },
   "devDependencies": {
@@ -20,6 +19,7 @@
     "react": "^18.2.0"
   },
   "peerDependencies": {
+    "rxjs": "^7.6.0",
     "react": "^18.2.0"
   }
 }
