@@ -5,7 +5,7 @@ import { defaultLazyOptions, processLazyOptions, useDelayed } from "./internal"
 
 export type LazyProps<D, P> = LazyOverrides<P> & {
     pass: P
-    component: ComponentType<P & D>
+    component: ComponentType<P & D>//TODO does component need to accept both? thought we could just merge P with D.
     result?: PromiseSettledResult<D>
 }
 

@@ -3,7 +3,7 @@ import { callOrGet } from "value-or-factory"
 import { LazyOptions } from "."
 
 /**
- * Return true after a delay.
+ * Return true after a delay. Reset by changing the timeout.
  */
 export function useDelayed(ms: number) {
     const [ready, setReady] = useState(ms === 0)
