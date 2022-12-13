@@ -54,3 +54,15 @@ export function processLazyOptions<T>(options: LazyOptions<T>, pass: T) {
         reloadingDelay: callOrGet(options.reloadingDelay, pass),
     }
 }
+
+export function addKeyToPromiseResult<T, K extends string | number | symbol>(key: K, result: PromiseSettledResult<T> | undefined) {
+    if (result?.status === "fulfilled") {
+        return {
+            status: result.status,
+            value: { [key]: result.value } as Record<K, T>
+        }
+    }
+    else {
+        return result
+    }
+}
