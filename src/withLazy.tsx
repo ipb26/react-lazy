@@ -15,23 +15,3 @@ export function withLazy<I extends {}, D extends {}, P extends {}>(build: (props
         }
     }
 }
-
-export function withLazyAs<I extends {}, D, P extends {}, K extends string>(key: K, build: (props: I) => LazyBuilder<I, D, P>, overrides: LazyOverrides<I & P>) {
-    return withLazy<I, Record<K, D>, P>(props => {
-        const built = build(props)
-        return {
-            ...built,
-            result: (() => {
-                if (built.result?.status === "fulfilled") {
-                    return {
-                        status: built.result.status,
-                        value: { [key]: built.result.value } as Record<K, D>
-                    }
-                }
-                else {
-                    return built.result
-                }
-            })(),
-        }
-    }, overrides)
-}

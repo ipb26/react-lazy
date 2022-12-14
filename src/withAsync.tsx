@@ -1,37 +1,17 @@
 
 import { AsyncOptions, AsyncState, PromiseFn, useAsync } from "react-async"
-import { LazyOverrides, withLazy, withLazyAs } from "./"
+import { LazyOverrides, withLazy } from "./"
 import { addKeyToPromiseResult } from "./internal"
 
-function toPromiseResult<D>(state: AsyncState<D>) {
-    if (state.isFulfilled) {
-        return {
-            status: state.status,
-            value: state.data
-        }
-    }
-    else if (state.isRejected) {
-        return {
-            status: state.status,
-            reason: state.error
-        }
-    }
-}
-
 export function useAsyncAsPromiseResult<D>(options: PromiseFn<D> | AsyncOptions<D>) {
-    const state = useAsync(options)
-    if (state.isFulfilled) {
+    const state = useAsyncAsStatePromiseResult(options)
+    if (state?.status === "fulfilled") {
         return {
             status: state.status,
-            value: state.data
+            value: state.value.data,
         }
     }
-    else if (state.isRejected) {
-        return {
-            status: state.status,
-            reason: state.error
-        }
-    }
+    return state
 }
 export function useAsyncAsStatePromiseResult<D>(options: PromiseFn<D> | AsyncOptions<D>) {
     const state = useAsync(options)
@@ -58,7 +38,7 @@ export function withAsyncAs<I extends {}, D, K extends string>(key: K, build: (p
 }
 
 export function withAsyncState<I extends {}, D, K extends string>(key: K, build: (props: I) => PromiseFn<D> | AsyncOptions<D>, overrides: LazyOverrides<I & Record<K, AsyncState<D>>> = {}) {
-    return withLazyAs(key, (props: I) => {
+    return withLazy((props: I) => {
         const state = useAsyncAsStatePromiseResult(build(props))
         return {
             result: addKeyToPromiseResult(key, state),

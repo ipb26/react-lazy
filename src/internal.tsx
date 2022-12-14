@@ -62,7 +62,5 @@ export function addKeyToPromiseResult<T, K extends string | number | symbol>(key
             value: { [key]: result.value } as Record<K, T>
         }
     }
-    else {
-        return result
-    }
+    return result
 }
