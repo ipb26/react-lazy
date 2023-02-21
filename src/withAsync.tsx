@@ -1,48 +1,71 @@
 
-import { AsyncOptions, AsyncState, PromiseFn, useAsync } from "react-async"
+import { useEffect } from "react"
+import { AsyncOptions, AsyncState, PromiseFn, useAsync as useAsyncFromReactAsync } from "react-async"
 import { LazyOverrides, withLazy } from "./"
 import { addKeyToPromiseResult } from "./internal"
 
-export function useAsyncAsPromiseResult<D>(options: PromiseFn<D> | AsyncOptions<D>) {
-    const state = useAsyncAsStatePromiseResult(options)
-    if (state?.status === "fulfilled") {
-        return {
-            status: state.status,
-            value: state.value.data,
+export function useAsync<D>(options: PromiseFn<D> | (AsyncOptions<D> & { cleanupFn?: (value: D) => void })) {
+    const state = useAsyncFromReactAsync(options)
+    useEffect(() => {
+        if (state.isResolved) {
+            return () => {
+                if (typeof options === "object") {
+                    options.cleanupFn?.(state.data)
+                }
+            }
         }
-    }
+    }, [state.isResolved])
     return state
 }
-export function useAsyncAsStatePromiseResult<D>(options: PromiseFn<D> | AsyncOptions<D>) {
-    const state = useAsync(options)
+
+export function asyncStateToDataLazy<D>(state: AsyncState<D>) {
     if (state.isFulfilled) {
-        return {
-            status: state.status,
-            value: state
-        }
+        return { status: state.status, value: state.data }
     }
     else if (state.isRejected) {
-        return {
-            status: state.status,
-            reason: state.error
-        }
+        return { status: state.status, reason: state.error, retry: state.reload }
+    }
+}
+export function asyncStateToStateLazy<D>(state: AsyncState<D>) {
+    if (state.isFulfilled) {
+        return { status: state.status, value: state }
+    }
+    else if (state.isRejected) {
+        return { status: state.status, reason: state.error, retry: state.reload }
     }
 }
 
-export function withAsync<I extends {}, D extends {}>(build: (props: I) => PromiseFn<D> | AsyncOptions<D>, overrides: LazyOverrides<I> = {}) {
-    return withLazy((props: I) => ({ result: useAsyncAsPromiseResult(build(props)), pass: {} }), overrides)
-}
+export type WithAsyncOptions<D> = (PromiseFn<D> | (AsyncOptions<D> & { cleanupFn?: (value: D) => void })) & { overrides?: LazyOverrides }
 
-export function withAsyncAs<I extends {}, D, K extends string>(key: K, build: (props: I) => PromiseFn<D> | AsyncOptions<D>, overrides: LazyOverrides<I> = {}) {
-    return withLazy((props: I) => ({ result: addKeyToPromiseResult(key, useAsyncAsPromiseResult(build(props))), pass: {} }), overrides)
-}
-
-export function withAsyncState<I extends {}, D, K extends string>(key: K, build: (props: I) => PromiseFn<D> | AsyncOptions<D>, overrides: LazyOverrides<I & Record<K, AsyncState<D>>> = {}) {
+export function withAsync<I extends {}, D extends {}>(factory: (props: I) => WithAsyncOptions<D>) {
     return withLazy((props: I) => {
-        const state = useAsyncAsStatePromiseResult(build(props))
+        const options = factory(props)
+        const state = useAsync(options)
         return {
-            result: addKeyToPromiseResult(key, state),
-            pass: { [key]: state } as Record<K, AsyncState<D>>
+            result: asyncStateToDataLazy(state),
+            overrides: options.overrides
         }
-    }, overrides)
+    })
+}
+
+export function withAsyncAs<I extends {}, D, K extends string>(key: K, factory: (props: I) => WithAsyncOptions<D>) {
+    return withLazy((props: I) => {
+        const options = factory(props)
+        const state = useAsync(options)
+        return {
+            result: addKeyToPromiseResult(key, asyncStateToDataLazy(state)),
+            overrides: options.overrides
+        }
+    })
+}
+
+export function withAsyncState<I extends {}, D, K extends string>(key: K, factory: (props: I) => WithAsyncOptions<D>) {
+    return withLazy((props: I) => {
+        const options = factory(props)
+        const state = useAsync(options)
+        return {
+            result: addKeyToPromiseResult(key, asyncStateToStateLazy(state)),
+            overrides: options.overrides
+        }
+    })
 }

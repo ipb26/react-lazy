@@ -1,17 +1,23 @@
 
-import { omit, pick } from "ramda"
-import { ComponentType } from "react"
-import { Lazy, lazyOptionKeys, LazyOverrides } from "./"
+import { ComponentType, createElement } from "react"
+import { Lazy, LazyBuilder } from "./"
+import { addKeyToPromiseResult } from "./internal"
 
-export type LazyBuilder<I, D, P> = { result?: PromiseSettledResult<D>, pass: P } & LazyOverrides<I & P>
-
-export function withLazy<I extends {}, D extends {}, P extends {}>(build: (props: I) => LazyBuilder<I, D, P>, overrides: LazyOverrides<I & P>) {
-    return (component: ComponentType<D & Omit<I, keyof LazyOverrides<I & P>>>) => {//TODO rm omit?
-        return (props: I & LazyOverrides<I & P>) => {
+export function withLazy<I extends {}, D extends {}>(build: (props: I) => LazyBuilder<D>) {
+    return (component: ComponentType<I & D>) => {
+        return (props: I) => {
             const built = build(props)
-            const options = pick(lazyOptionKeys, { ...overrides, ...props, ...built })
-            const pass = omit(lazyOptionKeys, props)
-            return <Lazy result={built.result} pass={pass} component={component} {...options} />
+            return <Lazy result={built.result} render={data => createElement(component, { ...props, ...data })} overrides={built.overrides} />
+        }
+    }
+}
+
+export function withLazyAs<I extends {}, D, K extends string>(key: K, build: (props: I) => LazyBuilder<D>) {
+    return (component: ComponentType<I & Record<K, D>>) => {
+        return (props: I) => {
+            const built = build(props)
+            const data = addKeyToPromiseResult(key, built.result)
+            return <Lazy result={data} render={data => createElement(component, { ...props, ...data })} overrides={built.overrides} />
         }
     }
 }

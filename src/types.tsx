@@ -1,33 +1,25 @@
-import { keys } from "ramda"
-import { ComponentType, createContext, ReactNode } from "react"
+import { createContext, ReactNode } from "react"
 import { ValueOrFactory } from "value-or-factory"
-import { defaultLazyOptions } from "./internal"
 
 export type LoadingProps = { title?: string }
 export type ReloadingProps = { children: ReactNode, title?: string, reloading: boolean }
-export type ErrorProps = { error: unknown, retry?: () => void }
+export type ErrorProps = { error: unknown, retry?(): void }
 
-export type LoadingComponentType<T = {}> = ComponentType<T & LoadingProps>
-export type ReloadingComponentType<T = {}> = ComponentType<T & ReloadingProps>
-export type ErrorComponentType<T = {}> = ComponentType<T & ErrorProps>
-
-export type LazyOptions<T = {}> = {
-    onLoading: (props: LoadingProps & T) => JSX.Element
-    onReloading: (props: ReloadingProps & T) => JSX.Element
-    onError: (props: ErrorProps & T) => JSX.Element
-    showLoading: ValueOrFactory<boolean, [T]>
-    showReloading: ValueOrFactory<boolean, [T]>
-    distinguishReloading: ValueOrFactory<boolean, [T]>
-    loadingTitle?: ValueOrFactory<string, [T]>
-    reloadingTitle?: ValueOrFactory<string, [T]>
-    loadingDelay: ValueOrFactory<number, [T]>
-    reloadingDelay: ValueOrFactory<number, [T]>
+export type LazyOptions = {
+    onLoading: ValueOrFactory<ReactNode, [LoadingProps]>
+    onReloading: ValueOrFactory<ReactNode, [ReloadingProps]>
+    onError: ValueOrFactory<ReactNode, [ErrorProps]>
+    showLoading: boolean
+    showReloading: boolean
+    distinguishReloading: boolean
+    loadingTitle?: string
+    reloadingTitle?: string
+    loadingDelay: number
+    reloadingDelay: number
 }
 
-export type LazyOverrides<P = {}> = Partial<LazyOptions<P>>
+export type LazyOverrides = Partial<LazyOptions>
+export type LazyResult<D> = PromiseFulfilledResult<D> | (PromiseRejectedResult & { retry?(): void }) | undefined
+export type LazyBuilder<D> = { result: LazyResult<D>, overrides?: LazyOverrides }
 
-export type WithLazyOverrides<P> = P & LazyOverrides<P>
-
-export const LazyContext = createContext<LazyOverrides<{}>>({})
-
-export const lazyOptionKeys = keys(defaultLazyOptions)
+export const LazyContext = createContext<LazyOverrides>({})
