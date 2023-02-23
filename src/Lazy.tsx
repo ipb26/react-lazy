@@ -4,11 +4,7 @@ import { callOrGet } from "value-or-factory"
 import { LazyContext, LazyOverrides, LazyResult } from "."
 import { defaultLazyOptions, useDelayed } from "./internal"
 
-export type LazyProps<D> = {
-    result: LazyResult<D>
-    overrides?: LazyOverrides
-    render(data: D): ReactNode
-}
+export type LazyProps<D> = { result: LazyResult<D>, overrides?: LazyOverrides, render(data: D): ReactNode }
 
 export function Lazy<D>(props: LazyProps<D>) {
     const defaults = useContext(LazyContext)

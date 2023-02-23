@@ -4,7 +4,7 @@ import { Observable } from "rxjs"
 import { LazyOverrides, withLazy } from "./"
 import { addKeyToPromiseResult } from "./internal"
 
-export function useObservableLazy<D>(observable: Observable<D>) {
+export function useObservableLazyResult<D>(observable: Observable<D>) {
     const [result, setResult] = useState<PromiseSettledResult<D>>()
     useEffect(() => {
         const sub = observable.subscribe({ next: value => setResult({ status: "fulfilled", value }), error: reason => setResult({ status: "rejected", reason }) })
@@ -15,11 +15,7 @@ export function useObservableLazy<D>(observable: Observable<D>) {
     return result
 }
 
-export function useObservableAsLazy<K extends string, D>(key: K, observable: Observable<D>) {
-    return addKeyToPromiseResult(key, useObservableLazy(observable))
-}
-
-export function useObservableResultLazy<D>(observable: Observable<PromiseSettledResult<D> | undefined>) {
+export function useResultObservableLazyResult<D>(observable: Observable<PromiseSettledResult<D> | undefined>) {
     const [result, setResult] = useState<PromiseSettledResult<D>>()
     useEffect(() => {
         const sub = observable.subscribe({ next: value => setResult(value), error: reason => setResult({ status: "rejected", reason }) })
@@ -28,10 +24,6 @@ export function useObservableResultLazy<D>(observable: Observable<PromiseSettled
         }
     }, [observable])
     return result
-}
-
-export function useObservableResultAsLazy<K extends string, D>(key: K, observable: Observable<PromiseSettledResult<D> | undefined>) {
-    return addKeyToPromiseResult(key, useObservableResultLazy(observable))
 }
 
 type WithObservableOptions<D> = {
@@ -43,17 +35,17 @@ export function withObservable<I extends {}, D extends {}>(factory: (props: I) =
     return withLazy((props: I) => {
         const options = factory(props)
         return {
-            result: useObservableLazy(options.of),
+            result: useObservableLazyResult(options.of),
             overrides: options.overrides
         }
     })
 }
 
-export function withObservableResult<I extends {}, D extends {}>(factory: (props: I) => WithObservableOptions<PromiseSettledResult<D> | undefined>) {
+export function withResultObservable<I extends {}, D extends {}>(factory: (props: I) => WithObservableOptions<PromiseSettledResult<D> | undefined>) {
     return withLazy((props: I) => {
         const options = factory(props)
         return {
-            result: useObservableResultLazy(options.of),
+            result: useResultObservableLazyResult(options.of),
             overrides: options.overrides
         }
     })
@@ -63,17 +55,17 @@ export function withObservableAs<I extends {}, D, K extends string>(key: K, fact
     return withLazy((props: I) => {
         const options = factory(props)
         return {
-            result: useObservableAsLazy(key, options.of),
+            result: addKeyToPromiseResult(key, useObservableLazyResult(options.of)),
             overrides: options.overrides
         }
     })
 }
 
-export function withObservableResultAs<I extends {}, D, K extends string>(key: K, factory: (props: I) => WithObservableOptions<PromiseSettledResult<D> | undefined>) {
+export function withResultObservableAs<I extends {}, D, K extends string>(key: K, factory: (props: I) => WithObservableOptions<PromiseSettledResult<D> | undefined>) {
     return withLazy((props: I) => {
         const options = factory(props)
         return {
-            result: useObservableResultAsLazy(key, options.of),
+            result: addKeyToPromiseResult(key, useResultObservableLazyResult(options.of)),
             overrides: options.overrides
         }
     })
