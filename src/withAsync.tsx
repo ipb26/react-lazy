@@ -7,11 +7,10 @@ import { addKeyToPromiseResult } from "./internal"
 export function useAsync<D>(options: PromiseFn<D> | (AsyncOptions<D> & { cleanupFn?: (value: D) => void })) {
     const state = useAsyncFromReactAsync(options)
     useEffect(() => {
-        if (state.isResolved) {
-            return () => {
-                if (typeof options === "object") {
-                    options.cleanupFn?.(state.data)
-                }
+        if (state.isResolved && typeof options === "object") {
+            const fn = options.cleanupFn
+            if (fn !== undefined) {
+                return () => fn(state.data)
             }
         }
     }, [state.isResolved])
