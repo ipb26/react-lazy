@@ -1,25 +1,24 @@
 {
-  "name": "react-lazy",
-  "license": "MIT",
-  "scripts": {
-    "build": "tsc",
-    "watch": "nodemon -e '*' --watch src --watch package.json --watch tsconfig.json --exec yarn build"
-  },
-  "module": "dist/index.js",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "dependencies": {
-    "ramda": "^0.28.0",
-    "react-async": "^10.0.1",
-    "value-or-factory": "^0.0.1"
-  },
-  "devDependencies": {
-    "@types/ramda": "^0.28.20",
-    "@types/react": "^18.0.26",
-    "react": "^18.2.0"
-  },
-  "peerDependencies": {
-    "rxjs": "^7.6.0",
-    "react": "^18.2.0"
-  }
+    "name": "react-lazy",
+    "license": "MIT",
+    "scripts": {
+        "build": "tsc",
+        "watch": "nodemon -e '*' --watch src --watch package.json --watch tsconfig.json --exec yarn build"
+    },
+    "module": "dist/index.js",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "dependencies": {
+        "ramda": "^0.28.0",
+        "react-async": "^10.0.1",
+        "value-or-factory": "^0.0.1"
+    },
+    "devDependencies": {
+        "@types/ramda": "^0.28.20",
+        "@types/react": "^18.0.26"
+    },
+    "peerDependencies": {
+        "react": "^18.2.0",
+        "rxjs": "^7.8.0"
+    }
 }
