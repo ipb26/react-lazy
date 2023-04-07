@@ -1,24 +1,21 @@
 {
     "compilerOptions": {
-        "outDir": "dist",
-        "jsx": "react-jsx",
-        "declaration": true,
         "strict": true,
         "alwaysStrict": true,
+        "jsx": "react-jsx",
         "noImplicitOverride": true,
         "noImplicitAny": true,
         "noImplicitThis": true,
-        "sourceMap": true,
         "allowUnreachableCode": false,
         "allowUnusedLabels": false,
         "noFallthroughCasesInSwitch": true,
         "noPropertyAccessFromIndexSignature": true,
         "noUncheckedIndexedAccess": true,
         "moduleResolution": "node",
-        "forceConsistentCasingInFileNames": true,
-        "target": "esnext",
-        "allowSyntheticDefaultImports": true,
-        "module": "esnext"
+        "target": "ESNext",
+        "declaration": true,
+        "declarationDir": "dist/types",
+        "sourceMap": true,
     },
     "include": [
         "./src"
