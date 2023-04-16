@@ -17,7 +17,7 @@ export function useAsync<D>(options: PromiseFn<D> | (AsyncOptions<D> & { cleanup
     return state
 }
 
-export function useAsyncStateDataLazyResult<D>(state: AsyncState<D>) {
+export function useAsyncLazyResult<D>(state: AsyncState<D>) {
     if (state.isFulfilled) {
         return { status: state.status, value: state.data }
     }
@@ -41,7 +41,7 @@ export function withAsync<I extends {}, D extends {}>(factory: (props: I) => Wit
         const options = factory(props)
         const state = useAsync(options)
         return {
-            result: useAsyncStateDataLazyResult(state),
+            result: useAsyncLazyResult(state),
             overrides: options.overrides
         }
     })
@@ -52,7 +52,7 @@ export function withAsyncAs<I extends {}, D, K extends string>(key: K, factory: 
         const options = factory(props)
         const state = useAsync(options)
         return {
-            result: addKeyToPromiseResult(key, useAsyncStateDataLazyResult(state)),
+            result: addKeyToPromiseResult(key, useAsyncLazyResult(state)),
             overrides: options.overrides
         }
     })
