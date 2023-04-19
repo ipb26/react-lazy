@@ -1,13 +1,13 @@
 
 import { useEffect, useState } from "react"
 import { Observable } from "rxjs"
-import { LazyOverrides, withLazy } from "./"
+import { LazyOverrides, LazyResult, withLazy } from "./"
 import { addKeyToPromiseResult } from "./internal"
 
 export function useObservableLazyResult<D>(observable: Observable<D>) {
-    const [result, setResult] = useState<PromiseSettledResult<D>>()
+    const [result, setResult] = useState<LazyResult<D>>({ status: "loading" })
     useEffect(() => {
-        const sub = observable.subscribe({ next: value => setResult({ status: "fulfilled", value }), error: reason => setResult({ status: "rejected", reason }) })
+        const sub = observable.subscribe({ next: value => setResult({ status: "fulfilled", value }), error: reason => setResult({ status: "rejected", props: { reason } }) })
         return () => {
             sub.unsubscribe()
         }
@@ -16,9 +16,9 @@ export function useObservableLazyResult<D>(observable: Observable<D>) {
 }
 
 export function useResultObservableLazyResult<D>(observable: Observable<PromiseSettledResult<D> | undefined>) {
-    const [result, setResult] = useState<PromiseSettledResult<D>>()
+    const [result, setResult] = useState<LazyResult<D>>({ status: "loading" })
     useEffect(() => {
-        const sub = observable.subscribe({ next: value => setResult(value), error: reason => setResult({ status: "rejected", reason }) })
+        const sub = observable.subscribe({ next: value => setResult(value ?? { status: "loading" }), error: reason => setResult({ status: "rejected", reason }) })
         return () => {
             sub.unsubscribe()
         }
