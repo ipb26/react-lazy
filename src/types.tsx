@@ -1,31 +1,69 @@
-import { createContext, ReactNode } from "react"
+import { Fragment, ReactNode } from "react"
 import { ValueOrFactory } from "value-or-factory"
 
-export type LoadingProps = { title?: string, counter?: number, cancel?(): void }
-export type ReloadingProps<L> = { children: ReactNode, reloading?: L }
-export type ErrorProps = { reason: unknown, counter?: number, retry?(): void }
+export type LazyLoading = { status: "loading" }
+export type LazyFulfilled<D> = { status: "fulfilled", value: D }
+export type LazyRejected = { status: "rejected", reason: unknown, retry?(): void }
+export type LazySettled<D> = LazyFulfilled<D> | LazyRejected
+export type LazyState<D> = LazySettled<D> | LazyLoading
 
-export type LazyOptions<L extends LoadingProps = LoadingProps, E extends ErrorProps = ErrorProps> = {
-    onLoading: ValueOrFactory<ReactNode, [L]>
-    onReloading: ValueOrFactory<ReactNode, [ReloadingProps<L>]>
-    onError: ValueOrFactory<ReactNode, [E]>
+export type LazyMeta<D> = {
+    startedAt: Date
+    firstFulfilledAt?: Date | undefined
+    lastFulfilledAt?: Date | undefined
+    counter: number
+    revert(state: LazyState<D>): void
+    history: {
+        loading: LazyLoading[]
+        settled: LazySettled<D>[]
+        fulfilled: LazyFulfilled<D>[]
+        rejected: LazyRejected[]
+    }
+}
+
+export type LazyResult<D> = LazyMeta<D> & {
+    value: D
+    state: LazyState<D>
+}
+
+export type LoadingProps<D = unknown> = { title?: string | undefined, meta: LazyMeta<D> }
+export type ReloadingProps<D = unknown> = { children: ReactNode, reloading: boolean, title?: string | undefined, meta: LazyMeta<D> }
+export type ErrorProps<D = unknown> = { reason: unknown, retry?(): void, meta: LazyMeta<D> }
+export type ReloadErrorProps<D = unknown> = { children: ReactNode, reason?: unknown, retry?(): void, meta: LazyMeta<D> }
+
+export type LazyOptions<D = unknown> = {
+    onLoading: ValueOrFactory<ReactNode, [LoadingProps<D>]>
+    onReloading?: ValueOrFactory<ReactNode, [ReloadingProps<D>]>
+    onError: ValueOrFactory<ReactNode, [ErrorProps<D>]>
+    onReloadError?: ValueOrFactory<ReactNode, [ReloadErrorProps<D>]>
     showLoading: boolean
     showReloading: boolean
     distinguishReloading: boolean
+    distinguishReloadError: boolean
+    loadingDelay?: number
+    reloadingDelay?: number
     loadingTitle?: string
     reloadingTitle?: string
-    loadingDelay: number
-    reloadingDelay: number
 }
 
-export type LazyOverrides<L extends LoadingProps = LoadingProps, E extends ErrorProps = ErrorProps> = Partial<LazyOptions<L, E>>
+export type LazyOverrides<D = unknown> = Partial<LazyOptions<D>>
 
-export type LazySettled<D, E extends ErrorProps> = LazyFulfilled<D> | LazyRejected<E>
-export type LazyFulfilled<D> = { status: "fulfilled", value: D }
-export type LazyRejected<E extends ErrorProps> = { status: "rejected", props: E & ErrorProps }
-export type LazyLoading<L extends LoadingProps> = { status: "loading" } & LoadingProps & L
-export type LazyResult<D, L extends LoadingProps = LoadingProps, E extends ErrorProps = ErrorProps> = LazySettled<D, E> | LazyLoading<L>
-
-export type LazyBuilder<D, L extends LoadingProps, E extends ErrorProps> = { result: LazyResult<D, L, E>, overrides?: LazyOverrides<L, E> }
-
-export const LazyContext = createContext<LazyOverrides>({})
+export const DEFAULT_LAZY_OPTIONS: LazyOptions = {
+    onLoading: () => <Fragment />,
+    onReloading: props => props.children,
+    onError: props => {
+        throw props.reason
+    },
+    onReloadError: props => {
+        if (props.reason !== undefined) {
+            throw props.reason
+        }
+        return props.children
+    },
+    showLoading: true,
+    showReloading: true,
+    distinguishReloading: true,
+    distinguishReloadError: true,
+    loadingDelay: 10,
+    reloadingDelay: 10
+}

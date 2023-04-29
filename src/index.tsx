@@ -1,7 +1,7 @@
 
-export * from "./Lazy"
+export * from "./async"
+export * from "./components"
+export * from "./hoc"
+export * from "./observable"
 export * from "./types"
-export * from "./withAsync"
-export * from "./withLazy"
-export * from "./withObservable"
 
