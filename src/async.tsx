@@ -1,79 +1,180 @@
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { ValueOrFactory, callOrGet } from "value-or-factory"
 import { LazyOverrides, LazyState, lazified } from "."
 
+/**
+ * Options for the async hook.
+ * @typeParam D The data type.
+ */
 export type AsyncOptions<D> = {
+    /**
+     * A function that returns a promise. This MUST be memoized - it will re-run every time a new value is received. Use the useCallback hook.
+     */
     promise(): Promise<D>
+    /**
+     * An option cleanup function for unmount or reload.
+     * @param value The value.
+     */
     cleanup?(value: D): void
-    initial?: {
-        defer?: boolean
-        value: D
+    /**
+     * Defer the execution of this promise until run is called.
+     */
+    defer?: boolean
+    /**
+     * The initial value to pass through before the first promise runs.
+     */
+    initial?: D
+    on?: {
+        [K in keyof AsyncStates<D>]?: (state: AsyncStates<D>[K]) => void | Promise<void>
     }
 }
-export type AsyncState<D> = {
-    value: D
-    run(): void
+
+type AsyncStates<D> = {
+    change: AsyncState<D>
+    deferred: void
+    loading: void
+    settled: AsyncSettledState<D>
+    fulfilled: D
+    rejected: unknown
 }
 
-export function useAsync<D>(options: AsyncOptions<D>): LazyState<AsyncState<D>> {
+type AsyncState<D> = AsyncDeferredState | AsyncLoadingState | AsyncFulfilledState<D> | AsyncRejectedState
+type AsyncDeferredState = { status: "deferred" }
+type AsyncLoadingState = { status: "loading" }
+type AsyncFulfilledState<D> = { status: "fulfilled", value: D }
+type AsyncRejectedState = { status: "rejected", reason: unknown }
+type AsyncSettledState<D> = AsyncFulfilledState<D> | AsyncRejectedState
+
+type AsyncResult<D> = AsyncState<D> & { run(): void }
+
+export function useAsync<D>(options: AsyncOptions<D>): AsyncResult<D> {
+
     const [promise, setPromise] = useState<Promise<D>>()
-    const [result, setResult] = useState<PromiseSettledResult<D> | undefined>(options.initial !== undefined ? { status: "fulfilled", value: options.initial.value } : undefined)
-    const run = useCallback(async () => {
-        const promise = options.promise()
-        setPromise(promise)
-        return promise.then(() => void 0, () => void 0)
-    }, [options.promise])
+    const [result, setResult] = useState<AsyncState<D>>(() => {
+        if (options.defer === true) {
+            return {
+                status: "deferred"
+            }
+        }
+        else {
+            if ("initial" in options) {
+                return {
+                    status: "fulfilled",
+                    value: options.initial
+                }
+            }
+            else {
+                return {
+                    status: "loading",
+                }
+            }
+        }
+    })
+
+    const run = useCallback(async () => setPromise(options.promise()), [options.promise])
+
     useEffect(() => {
-        if (options.initial?.defer !== true) {
+        if (options.defer !== true) {
             run()
         }
-    }, [run, options.initial?.defer])
+    }, [run])
+
     useEffect(() => {
         if (promise !== undefined) {
+            setResult({ status: "loading" })
             promise.then(value => setResult({ status: "fulfilled", value }), reason => setResult({ status: "rejected", reason }))
             return () => {
                 promise.then(options.cleanup)
             }
         }
     }, [promise, options.cleanup])
-    if (result === undefined) {
+
+    /*
+    type AsyncStates<D> = {
+        all: AsyncState<D>
+        deferred: AsyncDeferredState
+        loading: AsyncLoadingState
+        settled: AsyncFulfilledState<D> | AsyncRejectedState
+        fulfilled: AsyncFulfilledState<D>
+        rejected: AsyncRejectedState
+    }*/
+
+
+    useEffect(() => {
+        options.on?.change?.(result)
+        if (result.status === "fulfilled" || result.status === "rejected") {
+            options.on?.settled?.(result)
+        }
+        if (result.status === "fulfilled") {
+            options.on?.fulfilled?.(result.value)
+        }
+        if (result.status === "rejected") {
+            options.on?.rejected?.(result.reason)
+        }
+        if (result.status === "loading") {
+            options.on?.loading?.()
+        }
+        if (result.status === "deferred") {
+            options.on?.deferred?.()
+        }
+    }, [result])
+
+    return useMemo(() => ({ ...result, run }), [result, run])
+
+}
+
+export function useAsyncAsLazy<D>(result: AsyncResult<D>): LazyState<AsyncifiedData<D>> {
+    if (result.status === "deferred" || result.status === "loading") {
         return {
-            status: "loading"
+            status: "loading" as const
         }
     }
-    else if (result.status === "rejected") {
-        return {
-            status: "rejected",
-            reason: result.reason,
-            retry: run,
+    else {
+        if (result.status === "rejected") {
+            return {
+                status: "rejected" as const,
+                reason: result.reason,
+                retry: result.run,
+            }
         }
-    }
-    return {
-        status: "fulfilled",
-        value: {
-            value: result.value,
-            run
+        return {
+            status: "fulfilled" as const,
+            value: result
         }
     }
 }
 
-export type AsyncifiedOptions<D, P extends {} = {}> = AsyncOptions<D> & { overrides?: ValueOrFactory<LazyOverrides, [LazyState<AsyncState<D>>]>, props?: P }
+export type AsyncifiedData<D> = { value: D, run(): void }
+export type AsyncifiedOptions<D, P extends {} = {}> = AsyncOptions<D> & { overrides?: ValueOrFactory<LazyOverrides, [AsyncResult<D>]>, props?: P }
 
 export function asyncified<I extends {}, D, K extends string, P extends {}>(key: K, factory: (props: I) => AsyncifiedOptions<D, P>) {
     return lazified(key, (props: I) => {
         const options = factory(props)
-        const state = useAsync(options)
+        const result = useAsync(options)
+        const state = useAsyncAsLazy(result)
         return {
             state,
-            overrides: callOrGet(options.overrides, state),
+            overrides: callOrGet(options.overrides, result),
             props: options.props
         }
     })
 }
 
-/*
-export type AsyncState<D> = ({
+/**
+ * Options for the async hook.
+ * @typeParam D The data type.
+ */
+export type DeferredAsyncOptions<D, A extends readonly unknown[]> = {
+    /**
+     * A function that returns a promise. This MUST be memoized - it will re-run every time a new value is received. Use the useCallback hook.
+     */
+    promise: (...args: A) => Promise<D>
+}
+
+export type AsyncCallbackState<D> = {
+    status: "deferred"
+} | {
     status: "loading"
 } | {
     status: "fulfilled"
@@ -81,42 +182,27 @@ export type AsyncState<D> = ({
 } | {
     status: "rejected"
     reason: unknown
-}) & {
-    run(): void
 }
 
-export function useAsyncData<D>(options: AsyncOptions<D>) {
-    const result = useAsync(options)
-    if (result.status !== "fulfilled") {
-        return result
-    }
-    return {
-        status: result.status,
-        value: result.value.data
-    }
-}*/
-/*
-export function withAsync<I extends {}, D extends {}, P extends {}>(factory: (props: I) => WithAsyncOptions<D, D, P>) {
-    return withLazy((props: I) => {
-        const options = factory(props)
-        const state = useAsyncData(options)
-        return {
-            state,
-            overrides: callOrGet(options.overrides, state),
-            props: options.props
-        }
-    })
+type AsyncCallback<R, A extends readonly unknown[]> = (...args: A) => Promise<R>
+type AsyncCallbackOptions<R, A extends readonly unknown[]> = {
+    callback: AsyncCallback<R, A>
+    propagateErrors?: boolean
 }
 
-export function withAsyncAs<I extends {}, D, K extends string, P extends {} = {}>(key: K, factory: (props: I) => WithAsyncOptions<D, D, P>) {
-    return withLazyAs(key, (props: I) => {
-        const options = factory(props)
-        const state = useAsyncData(options)
-        return {
-            state,
-            overrides: callOrGet(options.overrides, state),
-            props: options.props
-        }
+export function useAsyncCallback<R, A extends readonly unknown[]>(options: AsyncCallbackOptions<R, A>) {
+    const [promise, setPromise] = useState<Promise<R>>()
+    const [result, setResult] = useState<AsyncCallbackState<R>>({
+        status: "deferred"
     })
+    useEffect(() => {
+        if (promise !== undefined) {
+            setResult({ status: "loading" })
+            promise.then(value => setResult({ status: "fulfilled", value }), reason => setResult({ status: "rejected", reason }))
+        }
+    }, [
+        promise
+    ])
+    const run = useCallback(async (...args: A) => setPromise(options.callback(...args)), [options.callback])
+    return useMemo(() => ({ ...result, run }), [result, run])
 }
-*/

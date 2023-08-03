@@ -33,17 +33,17 @@ export type ReloadErrorProps<D = unknown> = { children: ReactNode, reason?: unkn
 
 export type LazyOptions<D = unknown> = {
     onLoading: ValueOrFactory<ReactNode, [LoadingProps<D>]>
-    onReloading?: ValueOrFactory<ReactNode, [ReloadingProps<D>]>
+    onReloading?: ValueOrFactory<ReactNode, [ReloadingProps<D>]> | undefined
     onError: ValueOrFactory<ReactNode, [ErrorProps<D>]>
-    onReloadError?: ValueOrFactory<ReactNode, [ReloadErrorProps<D>]>
+    onReloadError?: ValueOrFactory<ReactNode, [ReloadErrorProps<D>]> | undefined
     showLoading: boolean
     showReloading: boolean
     distinguishReloading: boolean
     distinguishReloadError: boolean
-    loadingDelay?: number
-    reloadingDelay?: number
-    loadingTitle?: string
-    reloadingTitle?: string
+    loadingDelay?: number | undefined
+    reloadingDelay?: number | undefined
+    loadingTitle?: string | undefined
+    reloadingTitle?: string | undefined
 }
 
 export type LazyOverrides<D = unknown> = Partial<LazyOptions<D>>
