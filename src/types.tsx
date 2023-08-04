@@ -28,8 +28,8 @@ export type LazyResult<D> = LazyMeta<D> & {
 
 export type LoadingProps<D = unknown> = { title?: string | undefined, meta: LazyMeta<D> }
 export type ReloadingProps<D = unknown> = { children: ReactNode, reloading: boolean, title?: string | undefined, meta: LazyMeta<D> }
-export type ErrorProps<D = unknown> = { reason: unknown, retry?(): void, meta: LazyMeta<D> }
-export type ReloadErrorProps<D = unknown> = { children: ReactNode, reason?: unknown, retry?(): void, meta: LazyMeta<D> }
+export type ErrorProps<D = unknown> = { reason: unknown, retry?: undefined | (() => void), meta: LazyMeta<D> }
+export type ReloadErrorProps<D = unknown> = { children: ReactNode, reason?: unknown, retry?: undefined | (() => void), meta: LazyMeta<D> }
 
 export type LazyOptions<D = unknown> = {
     onLoading: ValueOrFactory<ReactNode, [LoadingProps<D>]>
