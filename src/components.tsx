@@ -50,7 +50,7 @@ export function Lazy<D>(props: LazyProps<D>) {
     const settled = state.status !== "loading" ? state : meta.history.settled.at(-1)
     const loadingReady = useDelayed(settled === undefined && options.showLoading ? options.loadingDelay ?? 0 : 0)
     const reloadingReady = useDelayed(loading !== undefined && options.showReloading ? options.reloadingDelay ?? 0 : 0)
-    if (settled === undefined || options.onReloading === undefined || !options.distinguishReloading) {
+    if (settled === undefined || (state.status === "loading" && (options.onReloading === undefined || !options.distinguishReloading))) {
         if (!loadingReady) {
             return <Fragment />
         }
