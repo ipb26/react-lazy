@@ -6,8 +6,8 @@ import { DEFAULT_LAZY_OPTIONS, LazyMeta, LazyOverrides, LazyResult, LazySettled,
 export type LazyProps<D> = {
     state: LazyState<D>,
     overrides?: LazyOverrides<D> | undefined,
-    render(result: LazyResult<D>): ReactNode
     stackLimit?: number
+    children: (result: LazyResult<D>) => ReactNode
 }
 
 //TODO max stack size?
@@ -73,7 +73,7 @@ export function Lazy<D>(props: LazyProps<D>) {
                                 value: state.value,
                                 state: state,
                             }
-                            return <Fragment children={props.render(result)} />
+                            return <Fragment children={props.children(result)} />
                         }
                     })
                     if (options.onReloadError === undefined || !options.distinguishReloadError) {

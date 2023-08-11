@@ -8,7 +8,7 @@ export function lazified<I extends {}, D, K extends string, P extends {}>(key: K
     return (component: ComponentType<P & Record<K, LazyResult<D>>>) => {
         return (props: I & { prefill?: D }) => {
             const built = build(props)
-            return <Lazy state={built.state} overrides={built.overrides} render={result => createElement(component, { ...built.props!, ...({ [key]: result }) as Record<K, LazyResult<D>> })} />
+            return <Lazy state={built.state} overrides={built.overrides} children={result => createElement(component, { ...built.props!, ...({ [key]: result }) as Record<K, LazyResult<D>> })} />
         }
     }
 }

@@ -44,5 +44,5 @@ export type ObservingProps<D> = {
 export const Observing = <D,>(props: ObservingProps<D>) => {
     return <Lazy state={useObservable(props.of)}
         overrides={props.overrides}
-        render={props.children} />
+        children={props.children} />
 }
