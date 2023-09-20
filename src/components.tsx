@@ -45,7 +45,10 @@ export function Lazy<D>(props: LazyProps<D>) {
             setState(props.state)
             setMeta(meta => buildMeta(props.state, setState, props.stackLimit, meta))
         }
-    }, [first, props.state])
+    }, [
+        first,
+        props.state
+    ])
     const loading = state.status === "loading" ? state : undefined
     const settled = state.status !== "loading" ? state : meta.history.settled.at(-1)
     const loadingReady = useDelayed(settled === undefined && options.showLoading ? options.loadingDelay ?? 0 : 0)
@@ -114,6 +117,8 @@ function useDelayed(ms: number) {
                 clearTimeout(timer)
             }
         }
-    }, [ms])
+    }, [
+        ms
+    ])
     return ready
 }

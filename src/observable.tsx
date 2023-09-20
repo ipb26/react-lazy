@@ -13,7 +13,9 @@ export function useObservable<D>(observable: Observable<D>, prefill?: D) {
                 sub.unsubscribe()
             }
         }
-    }, [observable])
+    }, [
+        observable
+    ])
     if (prefill === undefined) {
         return result
     }
@@ -37,10 +39,13 @@ export function observing<I extends {}, D, K extends string, P extends {}>(key: 
 }
 
 export type ObservingProps<D> = {
+
     of: Observable<D>,
     overrides?: LazyOverrides
     children: (result: LazyResult<D>) => ReactNode
+
 }
+
 export const Observing = <D,>(props: ObservingProps<D>) => {
     return <Lazy state={useObservable(props.of)}
         overrides={props.overrides}
