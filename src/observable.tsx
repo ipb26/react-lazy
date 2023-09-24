@@ -1,39 +1,37 @@
 
 import { ReactNode, useEffect, useState } from "react"
 import { Observable } from "rxjs"
-import { Lazy, LazyOverrides, LazyResult, LazyState, lazified } from "."
+import { Lazy, LazyOverrides, LazyState, lazified } from "."
+import { LazyMeta } from "./meta"
 
-export function useObservable<D>(observable: Observable<D>, prefill?: D) {
-    const [result, setResult] = useState<LazyState<D>>({ status: "loading" })
+export function useObservableLazy<D>(observable: Observable<D>) {
+    const [result, setResult] = useState<LazyState<D>>(() => {
+        return {
+            status: "loading"
+        }
+    })
     useEffect(() => {
-        if (prefill === undefined) {
-            const sub = observable.subscribe({ next: value => setResult({ status: "fulfilled", value }), error: reason => setResult({ status: "rejected", reason }) })
-            return () => {
-                setResult({ status: "loading" })
-                sub.unsubscribe()
-            }
+        const sub = observable.subscribe({ next: value => setResult({ status: "fulfilled", value }), error: reason => setResult({ status: "rejected", reason }) })
+        return () => {
+            sub.unsubscribe()
+            setResult({
+                status: "loading"
+            })
         }
     }, [
         observable
     ])
-    if (prefill === undefined) {
-        return result
-    }
-    return {
-        status: "fulfilled" as const,
-        value: prefill
-    }
+    return result
 }
 
-export type ObservingOptions<D, P extends {}> = { of: Observable<D>, overrides?: LazyOverrides, props?: P }
+export type ObservingOptions<D> = { of: Observable<D>, overrides?: LazyOverrides, props?: number }
 
-export function observing<I extends {}, D, K extends string, P extends {}>(key: K, factory: (props: I) => ObservingOptions<D, P>) {
-    return lazified(key, (props: I & { prefill?: D }) => {
+export function observing<I extends {}, D, K extends string>(key: K, factory: (props: I) => ObservingOptions<D>) {
+    return lazified(key, (props: I) => {
         const options = factory(props)
         return {
-            state: useObservable(options.of, props.prefill),
+            state: useObservableLazy(options.of),
             overrides: options.overrides,
-            props: options.props,
         }
     })
 }
@@ -42,12 +40,12 @@ export type ObservingProps<D> = {
 
     of: Observable<D>,
     overrides?: LazyOverrides
-    children: (result: LazyResult<D>) => ReactNode
+    children: (value: D, meta: LazyMeta<D>) => ReactNode
 
 }
 
 export const Observing = <D,>(props: ObservingProps<D>) => {
-    return <Lazy state={useObservable(props.of)}
+    return <Lazy state={useObservableLazy(props.of)}
         overrides={props.overrides}
         children={props.children} />
 }

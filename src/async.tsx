@@ -25,6 +25,9 @@ export type AsyncOptions<D> = {
      * The initial value to pass through before the first promise runs.
      */
     initial?: D
+    /**
+     * Hooks for every state.
+     */
     on?: {
         [K in keyof AsyncStates<D>]?: (state: AsyncStates<D>[K]) => void | Promise<void>
     }
@@ -78,17 +81,32 @@ export function useAsync<D>(options: AsyncOptions<D>): AsyncResult<D> {
         if (options.defer !== true) {
             run()
         }
-    }, [run])
+    }, [
+        run
+    ])
 
     useEffect(() => {
         if (promise !== undefined) {
             setResult({ status: "loading" })
-            promise.then(value => setResult({ status: "fulfilled", value }), reason => setResult({ status: "rejected", reason }))
+            promise.then(value => {
+                setResult({
+                    status: "fulfilled",
+                    value
+                })
+            }, reason => {
+                setResult({
+                    status: "rejected",
+                    reason
+                })
+            })
             return () => {
                 promise.then(options.cleanup)
             }
         }
-    }, [promise, options.cleanup])
+    }, [
+        promise,
+        options.cleanup
+    ])
 
     /*
     type AsyncStates<D> = {
@@ -118,57 +136,59 @@ export function useAsync<D>(options: AsyncOptions<D>): AsyncResult<D> {
         if (result.status === "deferred") {
             options.on?.deferred?.()
         }
-    }, [result])
+    }, [
+        result
+    ])
 
     return useMemo(() => ({ ...result, run }), [result, run])
 
 }
 
 export function useAsyncAsLazy<D>(result: AsyncResult<D>): LazyState<AsyncifiedData<D>> {
-    if (result.status === "deferred" || result.status === "loading") {
-        return {
-            status: "loading" as const
-        }
-    }
-    else {
-        if (result.status === "rejected") {
+    return useMemo(() => {
+        if (result.status === "deferred" || result.status === "loading") {
             return {
-                status: "rejected" as const,
-                reason: result.reason,
-                retry: result.run,
+                status: "loading" as const
             }
         }
-        return {
-            status: "fulfilled" as const,
-            value: result
+        else {
+            if (result.status === "rejected") {
+                return {
+                    status: "rejected" as const,
+                    reason: result.reason,
+                    retry: result.run,
+                }
+            }
+            else {
+                return {
+                    status: "fulfilled" as const,
+                    value: result
+                }
+            }
         }
-    }
+    }, [
+        result
+    ])
 }
 
 export type AsyncifiedData<D> = { value: D, run(): void }
-export type AsyncifiedOptions<D, P extends {} = {}> = AsyncOptions<D> & { overrides?: ValueOrFactory<LazyOverrides, [AsyncResult<D>]>, props?: P }
+export type AsyncifiedOptions<D> = AsyncOptions<D> & { overrides?: ValueOrFactory<LazyOverrides, [AsyncResult<D>]> }
 
-export function asyncified<I extends {}, D, K extends string, P extends {}>(key: K, factory: (props: I) => AsyncifiedOptions<D, P>) {
+export function asyncified<I extends {}, D, K extends string>(key: K, factory: (props: I) => AsyncifiedOptions<D>) {
     return lazified(key, (props: I) => {
         const options = factory(props)
         const result = useAsync(options)
         const state = useAsyncAsLazy(result)
         return {
             state,
-            overrides: callOrGet(options.overrides, result),
-            props: options.props
+            overrides: callOrGet(options.overrides, result)
         }
     })
 }
 
-/**
- * Options for the async hook.
- * @typeParam D The data type.
- */
+/*
 export type DeferredAsyncOptions<D, A extends readonly unknown[]> = {
-    /**
-     * A function that returns a promise. This MUST be memoized - it will re-run every time a new value is received. Use the useCallback hook.
-     */
+ 
     promise: (...args: A) => Promise<D>
 }
 
@@ -206,3 +226,4 @@ export function useAsyncCallback<R, A extends readonly unknown[]>(options: Async
     const run = useCallback(async (...args: A) => setPromise(options.callback(...args)), [options.callback])
     return useMemo(() => ({ ...result, run }), [result, run])
 }
+*/

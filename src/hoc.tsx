@@ -1,16 +1,18 @@
 
 import { ComponentType, createElement } from "react"
-import { Lazy, LazyOverrides, LazyResult, LazyState } from "."
+import { Lazy, LazyOverrides, LazyState } from "."
+import { LazyMeta } from "./meta"
 
-export type LazyBuilder<D, P extends {}> = { state: LazyState<D>, overrides?: LazyOverrides | undefined, props?: P | undefined }
+export type LazyPass<K extends string, D> = { [X in K]: D } & { [P in `${K}Meta`]: LazyMeta<D> }
+export type LazyBuilder<D> = { state: LazyState<D>, overrides?: LazyOverrides | undefined }
 
-export function lazified<I extends {}, D, K extends string, P extends {}>(key: K, build: (props: I) => LazyBuilder<D, P>) {
-    return (component: ComponentType<P & Record<K, LazyResult<D>>>) => {
-        return (props: I & { prefill?: D }) => {
+export function lazified<I extends {}, D, K extends string>(key: K, build: (props: I) => LazyBuilder<D>) {
+    return (component: ComponentType<Omit<I, keyof LazyPass<K, D>> & LazyPass<K, D>>) => {
+        return (props: I) => {
             const built = build(props)
             return <Lazy state={built.state}
                 overrides={built.overrides}
-                children={result => createElement(component, { ...built.props!, ...({ [key]: result }) as Record<K, LazyResult<D>> })} />
+                children={(value, meta) => createElement(component, { ...props, ...({ [key]: value, [key + "Meta"]: meta }) as LazyPass<K, D> })} />
         }
     }
 }
