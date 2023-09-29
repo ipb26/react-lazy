@@ -1,76 +1,66 @@
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { ComponentType, createElement, useCallback, useEffect, useMemo, useState } from "react"
 import { ValueOrFactory, callOrGet } from "value-or-factory"
-import { LazyOverrides, LazyState, lazified } from "."
+import { Lazy, LazyEvent, LazyOverrides, LazyState, useLazyState } from "."
+import { PropsWithState, addProps } from "./internal"
 
 /**
  * Options for the async hook.
  * @typeParam D The data type.
  */
 export type AsyncOptions<D> = {
+
     /**
      * A function that returns a promise. This MUST be memoized - it will re-run every time a new value is received. Use the useCallback hook.
      */
     promise(): Promise<D>
+
     /**
      * An option cleanup function for unmount or reload.
      * @param value The value.
      */
-    cleanup?(value: D): void
+    cleanup?: (value: D) => void
+
     /**
-     * Defer the execution of this promise until run is called.
+     * TODO
      */
     defer?: boolean
+
     /**
      * The initial value to pass through before the first promise runs.
      */
     initial?: D
-    /**
-     * Hooks for every state.
-     */
-    on?: {
-        [K in keyof AsyncStates<D>]?: (state: AsyncStates<D>[K]) => void | Promise<void>
-    }
+
 }
 
-type AsyncStates<D> = {
-    change: AsyncState<D>
-    deferred: void
-    loading: void
-    settled: AsyncSettledState<D>
-    fulfilled: D
-    rejected: unknown
-}
-
+//TODO just merge this back with lazyStates
 type AsyncState<D> = AsyncDeferredState | AsyncLoadingState | AsyncFulfilledState<D> | AsyncRejectedState
 type AsyncDeferredState = { status: "deferred" }
 type AsyncLoadingState = { status: "loading" }
 type AsyncFulfilledState<D> = { status: "fulfilled", value: D }
 type AsyncRejectedState = { status: "rejected", reason: unknown }
-type AsyncSettledState<D> = AsyncFulfilledState<D> | AsyncRejectedState
 
-type AsyncResult<D> = AsyncState<D> & { run(): void }
+type AsyncResult<D> = { state: AsyncState<D>, run(): void }
 
+//TODO private
 export function useAsync<D>(options: AsyncOptions<D>): AsyncResult<D> {
 
     const [promise, setPromise] = useState<Promise<D>>()
-    const [result, setResult] = useState<AsyncState<D>>(() => {
-        if (options.defer === true) {
+    const [state, setResult] = useState<AsyncState<D>>(() => {
+        if (options.defer) {
             return {
-                status: "deferred"
+                status: "deferred",
+            }
+        }
+        else if ("initial" in options) {
+            return {
+                status: "fulfilled",
+                value: options.initial
             }
         }
         else {
-            if ("initial" in options) {
-                return {
-                    status: "fulfilled",
-                    value: options.initial
-                }
-            }
-            else {
-                return {
-                    status: "loading",
-                }
+            return {
+                status: "loading",
             }
         }
     })
@@ -82,6 +72,7 @@ export function useAsync<D>(options: AsyncOptions<D>): AsyncResult<D> {
             run()
         }
     }, [
+        options.defer,
         run
     ])
 
@@ -108,122 +99,106 @@ export function useAsync<D>(options: AsyncOptions<D>): AsyncResult<D> {
         options.cleanup
     ])
 
-    /*
-    type AsyncStates<D> = {
-        all: AsyncState<D>
-        deferred: AsyncDeferredState
-        loading: AsyncLoadingState
-        settled: AsyncFulfilledState<D> | AsyncRejectedState
-        fulfilled: AsyncFulfilledState<D>
-        rejected: AsyncRejectedState
-    }*/
-
-
-    useEffect(() => {
-        options.on?.change?.(result)
-        if (result.status === "fulfilled" || result.status === "rejected") {
-            options.on?.settled?.(result)
-        }
-        if (result.status === "fulfilled") {
-            options.on?.fulfilled?.(result.value)
-        }
-        if (result.status === "rejected") {
-            options.on?.rejected?.(result.reason)
-        }
-        if (result.status === "loading") {
-            options.on?.loading?.()
-        }
-        if (result.status === "deferred") {
-            options.on?.deferred?.()
+    const result = useMemo(() => {
+        return {
+            state,
+            run,
         }
     }, [
-        result
+        state,
+        run
     ])
 
-    return useMemo(() => ({ ...result, run }), [result, run])
+    return result
 
 }
 
-export function useAsyncAsLazy<D>(result: AsyncResult<D>): LazyState<AsyncifiedData<D>> {
-    return useMemo(() => {
-        if (result.status === "deferred" || result.status === "loading") {
+type AsyncActions = { run: () => void }
+type AsyncLazyState<D> = LazyState<D> & AsyncActions
+
+export function useAsyncLazy<D>(options: AsyncOptions<D>): AsyncLazyState<D> {
+    const result = useAsync(options)
+    const event = useMemo<LazyEvent<D>>(() => {
+        if (result.state.status === "deferred" || result.state.status === "loading") {
             return {
                 status: "loading" as const
             }
         }
-        else {
-            if (result.status === "rejected") {
-                return {
-                    status: "rejected" as const,
-                    reason: result.reason,
-                    retry: result.run,
-                }
+        if (result.state.status === "rejected") {
+            return {
+                status: "rejected" as const,
+                reason: result.state.reason,
+                retry: result.run,
             }
-            else {
-                return {
-                    status: "fulfilled" as const,
-                    value: result
-                }
-            }
+        }
+        return {
+            status: "fulfilled" as const,
+            value: result.state.value
         }
     }, [
         result
     ])
+    const state = useLazyState(event)
+    return useMemo(() => {
+        return {
+            ...state,
+            run: result.run,
+        }
+    }, [
+        state,
+        result.run,
+    ])
 }
 
 export type AsyncifiedData<D> = { value: D, run(): void }
-export type AsyncifiedOptions<D> = AsyncOptions<D> & { overrides?: ValueOrFactory<LazyOverrides, [AsyncResult<D>]> }
+export type AsyncifiedOptions<D> = AsyncOptions<D> & { overrides?: ValueOrFactory<LazyOverrides<D>, [AsyncActions]> }
+export type AsyncifiedPass<K extends string, D> = PropsWithState<K, D, AsyncLazyState<D>>
 
 export function asyncified<I extends {}, D, K extends string>(key: K, factory: (props: I) => AsyncifiedOptions<D>) {
-    return lazified(key, (props: I) => {
-        const options = factory(props)
-        const result = useAsync(options)
-        const state = useAsyncAsLazy(result)
-        return {
-            state,
-            overrides: callOrGet(options.overrides, result)
+    return (component: ComponentType<Omit<I, keyof AsyncifiedPass<K, D>> & AsyncifiedPass<K, D>>) => {
+        return (props: I) => {
+            const options = factory(props)
+            const state = useAsyncLazy(options)
+            const overrides = callOrGet(options.overrides, state)
+            return <Lazy state={state}
+                overrides={overrides}
+                children={value => createElement(component, { ...props, ...addProps(key, value, state) })} />
         }
-    })
+    }
 }
 
 /*
-export type DeferredAsyncOptions<D, A extends readonly unknown[]> = {
- 
-    promise: (...args: A) => Promise<D>
+    on?: {
+        [K in keyof AsyncStates<D>]?: (state: AsyncStates<D>[K]) => void | Promise<void>
+    }
+type AsyncStates<D> = {
+    change: AsyncState<D>
+    deferred: void
+    loading: void
+    settled: AsyncSettledState<D>
+    fulfilled: D
+    rejected: unknown
 }
 
-export type AsyncCallbackState<D> = {
-    status: "deferred"
-} | {
-    status: "loading"
-} | {
-    status: "fulfilled"
-    value: D
-} | {
-    status: "rejected"
-    reason: unknown
-}
+useEffect(() => {
+    options.on?.change?.(state)
+    if (state.status === "fulfilled" || state.status === "rejected") {
+        options.on?.settled?.(state)
+    }
+    if (state.status === "fulfilled") {
+        options.on?.fulfilled?.(state.value)
+    }
+    if (state.status === "rejected") {
+        options.on?.rejected?.(state.reason)
+    }
+    if (state.status === "loading") {
+        options.on?.loading?.()
+    }
+    if (state.status === "deferred") {
+        options.on?.deferred?.()
+    }
+}, [
+    state
+])
 
-type AsyncCallback<R, A extends readonly unknown[]> = (...args: A) => Promise<R>
-type AsyncCallbackOptions<R, A extends readonly unknown[]> = {
-    callback: AsyncCallback<R, A>
-    propagateErrors?: boolean
-}
-
-export function useAsyncCallback<R, A extends readonly unknown[]>(options: AsyncCallbackOptions<R, A>) {
-    const [promise, setPromise] = useState<Promise<R>>()
-    const [result, setResult] = useState<AsyncCallbackState<R>>({
-        status: "deferred"
-    })
-    useEffect(() => {
-        if (promise !== undefined) {
-            setResult({ status: "loading" })
-            promise.then(value => setResult({ status: "fulfilled", value }), reason => setResult({ status: "rejected", reason }))
-        }
-    }, [
-        promise
-    ])
-    const run = useCallback(async (...args: A) => setPromise(options.callback(...args)), [options.callback])
-    return useMemo(() => ({ ...result, run }), [result, run])
-}
 */

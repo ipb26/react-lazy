@@ -1,13 +1,22 @@
 import { ReactNode } from "react"
 import { ValueOrFactory } from "value-or-factory"
-import { LazyMeta } from "./meta"
+
+export type LazyEventType<D> = keyof LazyEvents<D>
+
+export type LazyEvents<D> = {
+
+    loading: LazyLoading
+    settled: LazySettled<D>
+    fulfilled: LazyFulfilled<D>
+    rejected: LazyRejected
+
+}
 
 export type LazyLoading = { status: "loading" }
 export type LazyFulfilled<D> = { status: "fulfilled", value: D }
 export type LazyRejected = { status: "rejected", reason: unknown, retry?(): void }
 export type LazySettled<D> = LazyFulfilled<D> | LazyRejected
-export type LazyState<D> = LazySettled<D> | LazyLoading
-
+export type LazyEvent<D> = LazySettled<D> | LazyLoading
 
 export type OnRender<D> = ValueOrFactory<ReactNode, [RenderProps<D>]>
 export type OnLoading<D> = ValueOrFactory<ReactNode, [LoadingProps<D>]>
@@ -16,28 +25,29 @@ export type OnError<D> = ValueOrFactory<ReactNode, [ErrorProps<D>]>
 export type OnReloadError<D> = ValueOrFactory<ReactNode, [ReloadErrorProps<D>]> | undefined
 
 export type RenderProps<D = unknown> = {
-    meta: LazyMeta<D>
+    state: LazyState<D>
+    children: ReactNode
 }
 export type LoadingProps<D = unknown> = {
-    title?: string | undefined,
-    meta: LazyMeta<D>
+    state: LazyState<D>
+    title?: string | undefined
 }
 export type ReloadingProps<D = unknown> = {
-    children: ReactNode,
-    reloading: boolean,
-    title?: string | undefined,
-    meta: LazyMeta<D>
+    state: LazyState<D>
+    children: ReactNode
+    reloading: boolean
+    title?: string | undefined
 }
 export type ErrorProps<D = unknown> = {
+    state: LazyState<D>
     reason: unknown,
-    retry?: undefined | (() => void),
-    meta: LazyMeta<D>
+    retry?: undefined | (() => void)
 }
 export type ReloadErrorProps<D = unknown> = {
-    children: ReactNode,
-    reason?: unknown,
-    retry?: undefined | (() => void),
-    meta: LazyMeta<D>
+    state: LazyState<D>
+    children: ReactNode
+    reason?: unknown
+    retry?: undefined | (() => void)
 }
 
 export type LazyOptions<D = any> = {
@@ -54,16 +64,23 @@ export type LazyOptions<D = any> = {
     reloadingDelay?: number | undefined
     loadingTitle?: string | undefined
     reloadingTitle?: string | undefined
-    stackLimit?: number
 }
 
 export type LazyOverrides<D = any> = Partial<LazyOptions<D>>
 
-export const DEFAULT_LAZY_OPTIONS: LazyOptions = {
-    showLoading: true,
-    showReloading: true,
-    distinguishReloading: true,
-    distinguishReloadError: false,
-    loadingDelay: 10,
-    reloadingDelay: 10
+export type LazyHistoryEvent<T> = T & { date: Date }
+
+export interface LazyHistory<T> {
+    count: number
+    first?: LazyHistoryEvent<T> | undefined
+    last?: LazyHistoryEvent<T> | undefined
+}
+
+export type LazyHistories<D> = {
+    [K in keyof LazyEvents<D>]: LazyHistory<LazyEvents<D>[K]>
+}
+
+export interface LazyState<D> {
+    current: LazyEvent<D>
+    history: LazyHistories<D>
 }

@@ -1,67 +1,38 @@
-import { useContext, useEffect, useMemo, useRef, useState } from "react"
-import { LazyContext } from "./components"
-import { LazyMeta, addToMeta } from "./meta"
-import { DEFAULT_LAZY_OPTIONS, LazyOptions, LazyOverrides, LazyState } from "./types"
+import { createContext, useEffect, useState } from "react"
+import { addToHistory, isType, useIsFirstMount } from "./internal"
+import { LazyEvent, LazyOverrides, LazyState } from "./types"
 
-export function useIsFirstMount() {
-    const isFirst = useRef(true)
-    if (isFirst.current) {
-        isFirst.current = false
-        return true
-    }
-    return isFirst.current
-}
+export const LazyContext = createContext<LazyOverrides>({})
 
-export function useDelayed(ms: number) {
-    const [ready, setReady] = useState(ms === 0)
-    useEffect(() => {
-        if (ms > 0) {
-            if (ready) {
-                setReady(false)
-            }
-            const timer = setTimeout(() => setReady(true), ms)
-            return () => {
-                clearTimeout(timer)
+export function useLazyState<D>(current: LazyEvent<D>) {
+    const [state, setState] = useState<LazyState<D>>(() => {
+        return {
+            current,
+            history: {
+                loading: addToHistory({ count: 0 }, [current].filter(isType("loading")).at(0)),
+                settled: addToHistory({ count: 0 }, [current].filter(isType("settled")).at(0)),
+                fulfilled: addToHistory({ count: 0 }, [current].filter(isType("fulfilled")).at(0)),
+                rejected: addToHistory({ count: 0 }, [current].filter(isType("rejected")).at(0))
             }
         }
-    }, [
-        ms
-    ])
-    return ready
-}
-
-export function useLazyMeta<D>(inputState: LazyState<D>, options: LazyOptions<D>) {
-    const [state, revert] = useState(inputState)
-    const [meta, setMeta] = useState<LazyMeta<D>>(() => addToMeta(state, revert, options.stackLimit))
+    })
     const first = useIsFirstMount()
     useEffect(() => {
         if (!first) {
-            revert(inputState)
+            setState(state => {
+                return {
+                    current,
+                    history: {
+                        loading: addToHistory(state.history.loading, [current].filter(isType("loading")).at(0)),
+                        settled: addToHistory(state.history.settled, [current].filter(isType("settled")).at(0)),
+                        fulfilled: addToHistory(state.history.fulfilled, [current].filter(isType("fulfilled")).at(0)),
+                        rejected: addToHistory(state.history.rejected, [current].filter(isType("rejected")).at(0))
+                    }
+                }
+            })
         }
     }, [
-        inputState
+        current
     ])
-    useEffect(() => {
-        if (!first) {
-            setMeta(meta => addToMeta(state, revert, options.stackLimit, meta))
-        }
-    }, [
-        state
-    ])
-    return meta
-}
-
-export function useLazyOptions<D>(overrides?: LazyOverrides<D> | undefined) {
-    const context = useContext(LazyContext)
-    return useMemo(() => {
-        return {
-            ...DEFAULT_LAZY_OPTIONS,
-            ...context,
-            ...overrides
-        }
-    }, [
-        DEFAULT_LAZY_OPTIONS,
-        context,
-        overrides,
-    ])
+    return state
 }

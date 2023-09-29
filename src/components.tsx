@@ -1,47 +1,44 @@
 
-import { ReactNode, createContext } from "react"
+import { ReactNode } from "react"
 import { callOrGet } from "value-or-factory"
-import { useDelayed, useLazyMeta, useLazyOptions } from "./hooks"
-import { LazyMeta } from "./meta"
+import { useDelayed, useLazyOptions } from "./internal"
 import { LazyOverrides, LazySettled, LazyState } from "./types"
 
 export type LazyProps<D> = {
 
     state: LazyState<D>,
-    overrides?: LazyOverrides<D> | undefined,
-    children: (result: D, meta: LazyMeta<D>) => ReactNode
+    overrides?: LazyOverrides<D> | undefined
+    children: (result: D) => ReactNode
 
 }
 
-export const LazyContext = createContext<LazyOverrides>({})
-
 export function Lazy<D>(props: LazyProps<D>) {
     const options = useLazyOptions(props.overrides)
-    const meta = useLazyMeta(props.state, options)
-    const loading = meta.state.status === "loading" ? meta.state : undefined
-    const settled = meta.state.status !== "loading" ? meta.state : meta.history.settled.stack.at(-1)
+    const state = props.state
+    const loading = state.current.status === "loading" ? state.current : undefined
+    const settled = state.current.status !== "loading" ? state.current : state.history.settled.last
     const loadingReady = useDelayed(settled === undefined && options.showLoading ? options.loadingDelay ?? 0 : 0)
     const reloadingReady = useDelayed(loading !== undefined && options.showReloading ? options.reloadingDelay ?? 0 : 0)
-    if (settled === undefined || (meta.state.status === "loading" && (options.onReloading === undefined || !options.distinguishReloading))) {
+    if (settled === undefined || (state.current.status === "loading" && (options.onReloading === undefined || !options.distinguishReloading))) {
         if (!loadingReady || options.onLoading === undefined) {
             return null
         }
-        return callOrGet(options.onLoading, { title: options.loadingTitle, meta: meta })
+        return callOrGet(options.onLoading, { title: options.loadingTitle, state })
     }
     else {
         const reloadingChildren = (() => {
-            const children = ((state: LazySettled<D>) => {
-                if (state.status === "rejected") {
+            const children = ((event: LazySettled<D>) => {
+                if (event.status === "rejected") {
                     if (options.onError === undefined) {
-                        throw state.reason
+                        throw event.reason
                     }
-                    return callOrGet(options.onError, { reason: state.reason, retry: state.retry, meta: meta })
+                    return callOrGet(options.onError, { reason: event.reason, retry: event.retry, state })
                 }
                 else {
                     if (options.onRender === undefined) {
-                        return props.children(state.value, meta)
+                        return props.children(event.value)
                     }
-                    return callOrGet(options.onRender, { children: props.children(state.value, meta), meta: meta })
+                    return callOrGet(options.onRender, { children: props.children(event.value), state })
                 }
             })
             if (options.onReloadError === undefined) {
@@ -54,7 +51,7 @@ export function Lazy<D>(props: LazyProps<D>) {
                     if (settled.status === "rejected") {
                         return {
                             reloadError: settled,
-                            show: meta.history.fulfilled.stack.at(-1) ?? settled,
+                            show: state.history.fulfilled.last ?? settled,
                         }
                     }
                 }
@@ -66,7 +63,7 @@ export function Lazy<D>(props: LazyProps<D>) {
             return callOrGet(options.onReloadError, {
                 reason: reloadError?.reason,
                 retry: reloadError?.retry,
-                meta: meta,
+                state,
                 children: children(show)
             })
         })()
@@ -76,7 +73,7 @@ export function Lazy<D>(props: LazyProps<D>) {
         return callOrGet(options.onReloading, {
             title: options.reloadingTitle,
             reloading: loading !== undefined && reloadingReady,
-            meta: meta,
+            state,
             children: reloadingChildren
         })
     }
