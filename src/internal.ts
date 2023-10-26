@@ -2,7 +2,7 @@ import { useContext, useEffect, useMemo, useRef, useState } from "react"
 import { LazyContext } from "./hooks"
 import { LazyEvent, LazyEventType, LazyEvents, LazyHistory, LazyOptions, LazyOverrides } from "./types"
 
-export type PropsWithState<K extends string, D, S> = { [X in K]: D } & { [P in `${K}State`]: S }
+export type PropsWithState<K extends string, D, S> = { readonly [X in K]: D } & { readonly [P in `${K}State`]: S }
 
 export function addProps<K extends string, D, S>(key: K, value: D, state: S) {
     return {

@@ -13,23 +13,23 @@ export type AsyncOptions<D> = {
     /**
      * A function that returns a promise. This MUST be memoized - it will re-run every time a new value is received. Use the useCallback hook.
      */
-    promise(): Promise<D>
+    readonly promise: () => PromiseLike<D>
 
     /**
      * An option cleanup function for unmount or reload.
      * @param value The value.
      */
-    cleanup?: (value: D) => void
+    readonly cleanup?: (value: D) => void
 
     /**
      * TODO
      */
-    defer?: boolean
+    readonly defer?: boolean
 
     /**
      * The initial value to pass through before the first promise runs.
      */
-    initial?: D
+    readonly initial?: D
 
 }
 
@@ -45,7 +45,7 @@ type AsyncResult<D> = { state: AsyncState<D>, run(): void }
 //TODO private
 export function useAsync<D>(options: AsyncOptions<D>): AsyncResult<D> {
 
-    const [promise, setPromise] = useState<Promise<D>>()
+    const [promise, setPromise] = useState<PromiseLike<D>>()
     const [state, setResult] = useState<AsyncState<D>>(() => {
         if (options.defer) {
             return {
@@ -113,7 +113,7 @@ export function useAsync<D>(options: AsyncOptions<D>): AsyncResult<D> {
 
 }
 
-type AsyncActions = { run: () => void }
+type AsyncActions = { readonly run: () => void }
 type AsyncLazyState<D> = LazyState<D> & AsyncActions
 
 export function useAsyncLazy<D>(options: AsyncOptions<D>): AsyncLazyState<D> {

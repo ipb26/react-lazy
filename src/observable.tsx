@@ -36,7 +36,10 @@ export function useObservableLazy<D>(observable: Observable<D>) {
     return useLazyState(result)
 }
 
-export type ObservingOptions<D> = { of: Observable<D>, overrides?: LazyOverrides }
+export type ObservingOptions<D> = {
+    readonly of: Observable<D>
+    readonly overrides?: LazyOverrides
+}
 
 export function observing<I extends {}, D, K extends string>(key: K, factory: (props: I) => ObservingOptions<D>) {
     return lazified(key, (props: I) => {
@@ -50,7 +53,7 @@ export function observing<I extends {}, D, K extends string>(key: K, factory: (p
 
 export type ObservingProps<D> = ObservingOptions<D> & {
 
-    children: (value: D, state: LazyState<D>) => ReactNode
+    readonly children: (value: D, state: LazyState<D>) => ReactNode
 
 }
 

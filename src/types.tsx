@@ -25,45 +25,45 @@ export type OnError<D> = ValueOrFactory<ReactNode, [ErrorProps<D>]>
 export type OnReloadError<D> = ValueOrFactory<ReactNode, [ReloadErrorProps<D>]> | undefined
 
 export type RenderProps<D = unknown> = {
-    state: LazyState<D>
-    children: ReactNode
+    readonly state: LazyState<D>
+    readonly children: ReactNode
 }
 export type LoadingProps<D = unknown> = {
-    state: LazyState<D>
-    title?: string | undefined
+    readonly state: LazyState<D>
+    readonly title?: string | undefined
 }
 export type ReloadingProps<D = unknown> = {
-    state: LazyState<D>
-    children: ReactNode
-    reloading: boolean
-    title?: string | undefined
+    readonly state: LazyState<D>
+    readonly children: ReactNode
+    readonly reloading: boolean
+    readonly title?: string | undefined
 }
 export type ErrorProps<D = unknown> = {
-    state: LazyState<D>
-    reason: unknown,
-    retry?: undefined | (() => void)
+    readonly state: LazyState<D>
+    readonly reason: unknown,
+    readonly retry?: undefined | (() => void)
 }
 export type ReloadErrorProps<D = unknown> = {
-    state: LazyState<D>
-    children: ReactNode
-    reason?: unknown
-    retry?: undefined | (() => void)
+    readonly state: LazyState<D>
+    readonly children: ReactNode
+    readonly reason?: unknown
+    readonly retry?: undefined | (() => void)
 }
 
 export type LazyOptions<D = any> = {
-    onRender?: OnRender<D>
-    onLoading?: OnLoading<D>
-    onReloading?: OnReloading<D>
-    onError?: OnError<D>
-    onReloadError?: OnReloadError<D>
-    showLoading: boolean
-    showReloading: boolean
-    distinguishReloading: boolean
-    distinguishReloadError: boolean
-    loadingDelay?: number | undefined
-    reloadingDelay?: number | undefined
-    loadingTitle?: string | undefined
-    reloadingTitle?: string | undefined
+    readonly onRender?: OnRender<D>
+    readonly onLoading?: OnLoading<D>
+    readonly onReloading?: OnReloading<D>
+    readonly onError?: OnError<D>
+    readonly onReloadError?: OnReloadError<D>
+    readonly showLoading: boolean
+    readonly showReloading: boolean
+    readonly distinguishReloading: boolean
+    readonly distinguishReloadError: boolean
+    readonly loadingDelay?: number | undefined
+    readonly reloadingDelay?: number | undefined
+    readonly loadingTitle?: string | undefined
+    readonly reloadingTitle?: string | undefined
 }
 
 export type LazyOverrides<D = any> = Partial<LazyOptions<D>>
@@ -71,9 +71,9 @@ export type LazyOverrides<D = any> = Partial<LazyOptions<D>>
 export type LazyHistoryEvent<T> = T & { date: Date }
 
 export interface LazyHistory<T> {
-    count: number
-    first?: LazyHistoryEvent<T> | undefined
-    last?: LazyHistoryEvent<T> | undefined
+    readonly count: number
+    readonly first?: LazyHistoryEvent<T> | undefined
+    readonly last?: LazyHistoryEvent<T> | undefined
 }
 
 export type LazyHistories<D> = {
@@ -81,6 +81,6 @@ export type LazyHistories<D> = {
 }
 
 export interface LazyState<D> {
-    current: LazyEvent<D>
-    history: LazyHistories<D>
+    readonly current: LazyEvent<D>
+    readonly history: LazyHistories<D>
 }

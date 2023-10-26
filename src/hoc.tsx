@@ -7,8 +7,8 @@ export type LazyPass<K extends string, D> = PropsWithState<K, D, LazyState<D>>
 
 export type LazyBuilder<D> = {
 
-    state: LazyState<D>
-    overrides?: LazyOverrides | undefined
+    readonly state: LazyState<D>
+    readonly overrides?: LazyOverrides | undefined
 
 }
 
