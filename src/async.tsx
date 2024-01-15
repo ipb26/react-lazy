@@ -1,5 +1,5 @@
 
-import { ComponentType, createElement, useCallback, useEffect, useMemo, useState } from "react"
+import { ComponentType, ReactNode, createElement, useCallback, useEffect, useMemo, useState } from "react"
 import { ValueOrFactory, callOrGet } from "value-or-factory"
 import { Lazy, LazyEvent, LazyOverrides, LazyState, useLazyState } from "."
 import { PropsWithState, addProps } from "./internal"
@@ -13,7 +13,7 @@ export type AsyncOptions<D> = {
     /**
      * A function that returns a promise. This MUST be memoized - it will re-run every time a new value is received. Use the useCallback hook.
      */
-    readonly promise: () => PromiseLike<D>
+    readonly promise: ValueOrFactory<PromiseLike<D>>
 
     /**
      * An option cleanup function for unmount or reload.
@@ -65,7 +65,7 @@ export function useAsync<D>(options: AsyncOptions<D>): AsyncResult<D> {
         }
     })
 
-    const run = useCallback(async () => setPromise(options.promise()), [options.promise])
+    const run = useCallback(async () => setPromise(callOrGet(options.promise)), [options.promise])
 
     useEffect(() => {
         if (options.defer !== true) {
@@ -165,6 +165,19 @@ export function asyncified<I extends {}, D, K extends string>(key: K, factory: (
                 children={value => createElement(component, { ...props, ...addProps(key, value, state) })} />
         }
     }
+}
+
+export type AsyncifiedProps<D> = AsyncifiedOptions<D> & {
+
+    readonly children: (value: D, state: LazyState<D>) => ReactNode
+
+}
+
+export const Asyncified = <D,>(props: AsyncifiedProps<D>) => {
+    const state = useAsyncLazy(props)
+    return <Lazy state={state}
+        overrides={callOrGet(props.overrides, state)}
+        children={value => props.children(value, state)} />
 }
 
 /*
