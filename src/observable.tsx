@@ -1,24 +1,25 @@
 
 import { ReactNode, useEffect, useState } from "react"
 import { Observable } from "rxjs"
-import { Lazy, LazyEvent, LazyOverrides, LazyState, lazified, useLazyState } from "."
+import { Lazy, LazyEvent, LazyOverrides, LazyState, lazified } from "."
 
 export function useObservableLazy<D>(observable: Observable<D>) {
-    const [result, setResult] = useState<LazyEvent<D>>(() => {
-        return {
-            status: "loading"
-        }
+    const [event, setEvent] = useState<LazyEvent<D>>({
+        status: "loading"
     })
     useEffect(() => {
+        setEvent({
+            status: "loading"
+        })
         const sub = observable.subscribe({
             next: value => {
-                setResult({
+                setEvent({
                     status: "fulfilled",
                     value
                 })
             },
             error: reason => {
-                setResult({
+                setEvent({
                     status: "rejected",
                     reason
                 })
@@ -26,26 +27,26 @@ export function useObservableLazy<D>(observable: Observable<D>) {
         })
         return () => {
             sub.unsubscribe()
-            setResult({
-                status: "loading"
-            })
         }
     }, [
         observable
     ])
-    return useLazyState(result)
+    return event
 }
 
-export type ObservingOptions<D> = {
+export interface ObservingOptions<D> {
+
     readonly of: Observable<D>
     readonly overrides?: LazyOverrides
+
 }
 
 export function observing<I extends {}, D, K extends string>(key: K, factory: (props: I) => ObservingOptions<D>) {
     return lazified(key, (props: I) => {
         const options = factory(props)
+        const event = useObservableLazy(options.of)
         return {
-            state: useObservableLazy(options.of),
+            events: event,
             overrides: options.overrides,
         }
     })
@@ -58,8 +59,8 @@ export type ObservingProps<D> = ObservingOptions<D> & {
 }
 
 export const Observing = <D,>(props: ObservingProps<D>) => {
-    const state = useObservableLazy(props.of)
-    return <Lazy state={state}
-        overrides={props.overrides}
-        children={value => props.children(value, state)} />
+    const event = useObservableLazy(props.of)
+    return <Lazy events={event}
+        overrides={[props.overrides]}
+        children={(value, state) => props.children(value, state)} />
 }

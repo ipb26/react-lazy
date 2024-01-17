@@ -1,14 +1,13 @@
 import { ReactNode } from "react"
 import { ValueOrFactory } from "value-or-factory"
 
-export type LazyEventType<D> = keyof LazyEvents<D>
+export type LazyEventType<D> = keyof LazyEventTypes<D>
+export type LazyEventTypes<D> = {
 
-export type LazyEvents<D> = {
-
-    loading: LazyLoading
-    settled: LazySettled<D>
-    fulfilled: LazyFulfilled<D>
-    rejected: LazyRejected
+    readonly loading: LazyLoading
+    readonly settled: LazySettled<D>
+    readonly fulfilled: LazyFulfilled<D>
+    readonly rejected: LazyRejected
 
 }
 
@@ -17,6 +16,7 @@ export type LazyFulfilled<D> = { status: "fulfilled", value: D }
 export type LazyRejected = { status: "rejected", reason: unknown, retry?(): void }
 export type LazySettled<D> = LazyFulfilled<D> | LazyRejected
 export type LazyEvent<D> = LazySettled<D> | LazyLoading
+export type LazyEvents<D> = LazyEvent<D> | LazyEvent<D>[]
 
 export type OnRender<D> = ValueOrFactory<ReactNode, [RenderProps<D>]>
 export type OnLoading<D> = ValueOrFactory<ReactNode, [LoadingProps<D>]>
@@ -64,6 +64,13 @@ export type LazyOptions<D = any> = {
     readonly reloadingDelay?: number | undefined
     readonly loadingTitle?: string | undefined
     readonly reloadingTitle?: string | undefined
+
+    /**
+     * A callback that is called when the event changes.
+     * @param event The event.
+     */
+    readonly onChange?: (event: LazyEvent<D>) => void
+
 }
 
 export type LazyOverrides<D = any> = Partial<LazyOptions<D>>
@@ -77,7 +84,7 @@ export interface LazyHistory<T> {
 }
 
 export type LazyHistories<D> = {
-    [K in keyof LazyEvents<D>]: LazyHistory<LazyEvents<D>[K]>
+    [K in keyof LazyEventTypes<D>]: LazyHistory<LazyEventTypes<D>[K]>
 }
 
 export interface LazyState<D> {

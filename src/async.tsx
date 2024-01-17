@@ -1,7 +1,7 @@
 
 import { ComponentType, ReactNode, createElement, useCallback, useEffect, useMemo, useState } from "react"
 import { ValueOrFactory, callOrGet } from "value-or-factory"
-import { Lazy, LazyEvent, LazyOverrides, LazyState, useLazyState } from "."
+import { Lazy, LazyEvent, LazyOverrides, LazyState } from "."
 import { PropsWithState, addProps } from "./internal"
 
 /**
@@ -114,9 +114,9 @@ export function useAsync<D>(options: AsyncOptions<D>): AsyncResult<D> {
 }
 
 type AsyncActions = { readonly run: () => void }
-type AsyncLazyState<D> = LazyState<D> & AsyncActions
+type AsyncLazyEvent<D> = LazyEvent<D> & AsyncActions
 
-export function useAsyncLazy<D>(options: AsyncOptions<D>): AsyncLazyState<D> {
+export function useAsyncLazy<D>(options: AsyncOptions<D>): AsyncLazyEvent<D> {
     const result = useAsync(options)
     const event = useMemo<LazyEvent<D>>(() => {
         if (result.state.status === "deferred" || result.state.status === "loading") {
@@ -138,21 +138,20 @@ export function useAsyncLazy<D>(options: AsyncOptions<D>): AsyncLazyState<D> {
     }, [
         result
     ])
-    const state = useLazyState(event)
     return useMemo(() => {
         return {
-            ...state,
+            ...event,
             run: result.run,
         }
     }, [
-        state,
+        event,
         result.run,
     ])
 }
 
 export type AsyncifiedData<D> = { value: D, run(): void }
 export type AsyncifiedOptions<D> = AsyncOptions<D> & { overrides?: ValueOrFactory<LazyOverrides<D>, [AsyncActions]> }
-export type AsyncifiedPass<K extends string, D> = PropsWithState<K, D, AsyncLazyState<D>>
+export type AsyncifiedPass<K extends string, D> = PropsWithState<K, D, AsyncLazyEvent<D>>
 
 export function asyncified<I extends {}, D, K extends string>(key: K, factory: (props: I) => AsyncifiedOptions<D>) {
     return (component: ComponentType<Omit<I, keyof AsyncifiedPass<K, D>> & AsyncifiedPass<K, D>>) => {
@@ -160,8 +159,8 @@ export function asyncified<I extends {}, D, K extends string>(key: K, factory: (
             const options = factory(props)
             const state = useAsyncLazy(options)
             const overrides = callOrGet(options.overrides, state)
-            return <Lazy state={state}
-                overrides={overrides}
+            return <Lazy events={state}
+                overrides={[overrides]}
                 children={value => createElement(component, { ...props, ...addProps(key, value, state) })} />
         }
     }
@@ -174,10 +173,10 @@ export type AsyncifiedProps<D> = AsyncifiedOptions<D> & {
 }
 
 export const Asyncified = <D,>(props: AsyncifiedProps<D>) => {
-    const state = useAsyncLazy(props)
-    return <Lazy state={state}
-        overrides={callOrGet(props.overrides, state)}
-        children={value => props.children(value, state)} />
+    const event = useAsyncLazy(props)
+    return <Lazy events={event}
+        overrides={[callOrGet(props.overrides, event)]}
+        children={(value, state) => props.children(value, state)} />
 }
 
 /*

@@ -1,6 +1,6 @@
 import { useContext, useEffect, useMemo, useRef, useState } from "react"
 import { LazyContext } from "./hooks"
-import { LazyEvent, LazyEventType, LazyEvents, LazyHistory, LazyOptions, LazyOverrides } from "./types"
+import { LazyEvent, LazyEventType, LazyEventTypes, LazyHistory, LazyOptions, LazyOverrides } from "./types"
 
 export type PropsWithState<K extends string, D, S> = { readonly [X in K]: D } & { readonly [P in `${K}State`]: S }
 
@@ -12,8 +12,13 @@ export function addProps<K extends string, D, S>(key: K, value: D, state: S) {
 }
 
 export function isType<D, K extends LazyEventType<D>>(key: K) {
-    return (event: LazyEvent<D>): event is LazyEvents<D>[K] => {
-        return event.status === key
+    return (event: LazyEvent<D>): event is LazyEventTypes<D>[K] => {
+        if (key === "settled") {
+            return event.status === "fulfilled" || event.status === "rejected"
+        }
+        else {
+            return event.status === key
+        }
     }
 }
 
@@ -38,19 +43,19 @@ export function addToHistory<T>(history: LazyHistory<T>, event: T | undefined) {
     }
 }
 
-export function useLazyOptions<D>(overrides?: LazyOverrides<D> | undefined) {
+export function useLazyOptions<D>(overrides: (LazyOverrides<D> | undefined)[]) {
     const context = useContext(LazyContext)
     return useMemo(() => {
         return {
             ...DEFAULT_LAZY_OPTIONS,
             ...context,
-            ...overrides
+            ...Object.assign({}, ...overrides)
         }
     }, [
         DEFAULT_LAZY_OPTIONS,
         context,
-        overrides,
-    ])
+        overrides
+    ]) as LazyOptions<D>
 }
 
 export function useIsFirstMount() {
