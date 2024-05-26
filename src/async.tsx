@@ -180,6 +180,14 @@ export const Asyncified = <D,>(props: AsyncifiedProps<D>) => {
 }
 
 /*
+const event = useAsyncLazy(props)
+return <Lazy events={event}
+    overrides={[callOrGet(props.overrides, event)]}
+    children={(value, state) => props.children(value, state)} />
+    
+    */
+
+/*
     on?: {
         [K in keyof AsyncStates<D>]?: (state: AsyncStates<D>[K]) => void | Promise<void>
     }
