@@ -16,7 +16,7 @@ export type LazyFulfilled<D> = { status: "fulfilled", value: D }
 export type LazyRejected = { status: "rejected", reason: unknown, retry?(): void }
 export type LazySettled<D> = LazyFulfilled<D> | LazyRejected
 export type LazyEvent<D> = LazySettled<D> | LazyLoading
-export type LazyEvents<D> = LazyEvent<D> | LazyEvent<D>[]
+export type LazyEvents<D> = LazyEvent<D> | readonly LazyEvent<D>[]
 
 export type OnRender<D> = ValueOrFactory<ReactNode, [RenderProps<D>]>
 export type OnLoading<D> = ValueOrFactory<ReactNode, [LoadingProps<D>]>
@@ -75,19 +75,25 @@ export type LazyOptions<D = any> = {
 
 export type LazyOverrides<D = any> = Partial<LazyOptions<D>>
 
-export type LazyHistoryEvent<T> = T & { date: Date }
+export type LazyHistoryEvent<T> = T & { readonly date: Date }
 
 export interface LazyHistory<T> {
+
     readonly count: number
     readonly first?: LazyHistoryEvent<T> | undefined
     readonly last?: LazyHistoryEvent<T> | undefined
+
 }
 
 export type LazyHistories<D> = {
-    [K in keyof LazyEventTypes<D>]: LazyHistory<LazyEventTypes<D>[K]>
+
+    readonly [K in keyof LazyEventTypes<D>]: LazyHistory<LazyEventTypes<D>[K]>
+
 }
 
 export interface LazyState<D> {
+
     readonly current: LazyEvent<D>
     readonly history: LazyHistories<D>
+
 }
