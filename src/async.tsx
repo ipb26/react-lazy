@@ -1,8 +1,8 @@
 
-import { ComponentType, ReactNode, createElement, useCallback, useEffect, useMemo, useState } from "react"
+import { ComponentType, ReactNode, createElement, useCallback, useEffect, useState } from "react"
 import { ValueOrFactory, callOrGet } from "value-or-factory"
-import { Lazy, LazyEvent, LazyOverrides, LazyState } from "."
-import { PropsWithState, addProps } from "./internal"
+import { Lazy, LazyEvent, LazyOverrides } from "."
+import { KeyProps, addProps } from "./internal"
 
 /**
  * Options for the async hook.
@@ -15,210 +15,89 @@ export type AsyncOptions<D> = {
      */
     readonly promise: ValueOrFactory<PromiseLike<D>>
 
-    /**
-     * An option cleanup function for unmount or reload.
-     * @param value The value.
-     */
-    readonly cleanup?: (value: D) => void
-
-    /**
-     * TODO
-     */
-    readonly defer?: boolean
-
-    /**
-     * The initial value to pass through before the first promise runs.
-     */
-    readonly initial?: D
-
 }
 
-//TODO just merge this back with lazyStates
-type AsyncState<D> = AsyncDeferredState | AsyncLoadingState | AsyncFulfilledState<D> | AsyncRejectedState
-type AsyncDeferredState = { status: "deferred" }
-type AsyncLoadingState = { status: "loading" }
-type AsyncFulfilledState<D> = { status: "fulfilled", value: D }
-type AsyncRejectedState = { status: "rejected", reason: unknown }
+export interface AsyncValue<D> {
 
-type AsyncResult<D> = { state: AsyncState<D>, run(): void }
+    readonly value: D
+    run(): void
+}
 
 //TODO private
-export function useAsync<D>(options: AsyncOptions<D>): AsyncResult<D> {
-
+export function useAsync<D>(options: AsyncOptions<D>) {
     const [promise, setPromise] = useState<PromiseLike<D>>()
-    const [state, setResult] = useState<AsyncState<D>>(() => {
-        if (options.defer) {
-            return {
-                status: "deferred",
-            }
-        }
-        else if ("initial" in options) {
-            return {
-                status: "fulfilled",
-                value: options.initial
-            }
-        }
-        else {
-            return {
-                status: "loading",
-            }
+    const [state, setResult] = useState<LazyEvent<AsyncValue<D>>>(() => {
+        return {
+            status: "loading",
         }
     })
-
     const run = useCallback(async () => setPromise(callOrGet(options.promise)), [options.promise])
-
     useEffect(() => {
-        if (options.defer !== true) {
-            run()
-        }
+        run()
     }, [
-        options.defer,
         run
     ])
-
     useEffect(() => {
         if (promise !== undefined) {
-            setResult({ status: "loading" })
+            setResult({
+                status: "loading"
+            })
             promise.then(value => {
                 setResult({
                     status: "fulfilled",
-                    value
+                    value: {
+                        value,
+                        run
+                    }
                 })
             }, reason => {
                 setResult({
                     status: "rejected",
-                    reason
+                    reason,
+                    retry: run,
                 })
             })
-            return () => {
-                promise.then(options.cleanup)
-            }
         }
     }, [
-        promise,
-        options.cleanup
+        promise
     ])
-
-    const result = useMemo(() => {
-        return {
-            state,
-            run,
-        }
-    }, [
-        state,
-        run
-    ])
-
-    return result
-
+    return state
 }
 
-type AsyncActions = { readonly run: () => void }
-type AsyncLazyEvent<D> = LazyEvent<D> & AsyncActions
-
-export function useAsyncLazy<D>(options: AsyncOptions<D>): AsyncLazyEvent<D> {
-    const result = useAsync(options)
-    const event = useMemo<LazyEvent<D>>(() => {
-        if (result.state.status === "deferred" || result.state.status === "loading") {
-            return {
-                status: "loading" as const
-            }
-        }
-        if (result.state.status === "rejected") {
-            return {
-                status: "rejected" as const,
-                reason: result.state.reason,
-                retry: result.run,
-            }
-        }
-        return {
-            status: "fulfilled" as const,
-            value: result.state.value
-        }
-    }, [
-        result
-    ])
-    return useMemo(() => {
-        return {
-            ...event,
-            run: result.run,
-        }
-    }, [
-        event,
-        result.run,
-    ])
+export function useAsyncLazy<D>(options: AsyncOptions<D>) {
+    return useAsync(options)
 }
 
-export type AsyncifiedData<D> = { value: D, run(): void }
-export type AsyncifiedOptions<D> = AsyncOptions<D> & { overrides?: ValueOrFactory<LazyOverrides<D>, [AsyncActions]> }
-export type AsyncifiedPass<K extends string, D> = PropsWithState<K, D, AsyncLazyEvent<D>>
+export type AsyncifiedPass<K extends string, D> = KeyProps<K, AsyncValue<D>>
+
+export interface AsyncifiedOptions<D> extends AsyncOptions<D> {
+
+    readonly overrides?: ValueOrFactory<LazyOverrides, []> | undefined
+
+}
 
 export function asyncified<I extends {}, D, K extends string>(key: K, factory: (props: I) => AsyncifiedOptions<D>) {
-    return (component: ComponentType<Omit<I, keyof AsyncifiedPass<K, D>> & AsyncifiedPass<K, D>>) => {
+    return (component: ComponentType<I & AsyncifiedPass<K, D>>) => {
         return (props: I) => {
             const options = factory(props)
-            const state = useAsyncLazy(options)
-            const overrides = callOrGet(options.overrides, state)
-            return <Lazy events={state}
+            const event = useAsyncLazy(options)
+            const overrides = callOrGet(options.overrides)
+            return <Lazy event={event}
                 overrides={[overrides]}
-                children={value => createElement(component, { ...props, ...addProps(key, value, state) })} />
+                children={value => createElement(component, { ...props, ...addProps(key, value) })} />
         }
     }
 }
 
 export type AsyncifiedProps<D> = AsyncifiedOptions<D> & {
 
-    readonly children: (value: D, state: LazyState<D>) => ReactNode
+    readonly children: (value: AsyncValue<D>) => ReactNode
 
 }
 
 export const Asyncified = <D,>(props: AsyncifiedProps<D>) => {
     const event = useAsyncLazy(props)
-    return <Lazy events={event}
-        overrides={[callOrGet(props.overrides, event)]}
-        children={(value, state) => props.children(value, state)} />
+    return <Lazy event={event}
+        overrides={[callOrGet(props.overrides)]}
+        children={value => props.children(value)} />
 }
-
-/*
-const event = useAsyncLazy(props)
-return <Lazy events={event}
-    overrides={[callOrGet(props.overrides, event)]}
-    children={(value, state) => props.children(value, state)} />
-    
-    */
-
-/*
-    on?: {
-        [K in keyof AsyncStates<D>]?: (state: AsyncStates<D>[K]) => void | Promise<void>
-    }
-type AsyncStates<D> = {
-    change: AsyncState<D>
-    deferred: void
-    loading: void
-    settled: AsyncSettledState<D>
-    fulfilled: D
-    rejected: unknown
-}
-
-useEffect(() => {
-    options.on?.change?.(state)
-    if (state.status === "fulfilled" || state.status === "rejected") {
-        options.on?.settled?.(state)
-    }
-    if (state.status === "fulfilled") {
-        options.on?.fulfilled?.(state.value)
-    }
-    if (state.status === "rejected") {
-        options.on?.rejected?.(state.reason)
-    }
-    if (state.status === "loading") {
-        options.on?.loading?.()
-    }
-    if (state.status === "deferred") {
-        options.on?.deferred?.()
-    }
-}, [
-    state
-])
-
-*/

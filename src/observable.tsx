@@ -1,17 +1,16 @@
 
 import { ReactNode, useEffect, useState } from "react"
 import { Observable } from "rxjs"
-import { Lazy, LazyEvent, LazyOverrides, LazyState, lazified } from "."
+import { Lazy, LazyEvent, LazyOverrides, lazified } from "."
 
 export interface ObservableLazyOptions<D> {
 
     readonly of: Observable<D>
-    readonly prefill?: LazyEvent<D> | undefined
 
 }
 
 export function useObservableLazy<D>(options: ObservableLazyOptions<D>) {
-    const [event, setEvent] = useState<LazyEvent<D>>(options.prefill ?? { status: "loading" })
+    const [event, setEvent] = useState<LazyEvent<D>>({ status: "loading" as const })
     useEffect(() => {
         setEvent({
             status: "loading"
@@ -50,7 +49,7 @@ export function observing<I extends {}, D, K extends string>(key: K, factory: (p
         const options = factory(props)
         const event = useObservableLazy(options)
         return {
-            events: event,
+            event,
             overrides: options.overrides,
         }
     })
@@ -58,13 +57,13 @@ export function observing<I extends {}, D, K extends string>(key: K, factory: (p
 
 export interface ObservingProps<D> extends ObservingOptions<D> {
 
-    readonly children: (value: D, state: LazyState<D>) => ReactNode
+    readonly children: (value: D) => ReactNode
 
 }
 
 export const Observing = <D,>(props: ObservingProps<D>) => {
     const event = useObservableLazy(props)
-    return <Lazy events={event}
+    return <Lazy event={event}
         overrides={[props.overrides]}
-        children={(value, state) => props.children(value, state)} />
+        children={value => props.children(value)} />
 }
