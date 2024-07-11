@@ -1,7 +1,7 @@
 
 import { ReactNode, useEffect, useState } from "react"
 import { Observable } from "rxjs"
-import { Lazy, LazyEvent, LazyOverrides, lazified } from "."
+import { Lazy, LazyEvent, LazyOverrides, lazified2 } from "."
 
 export interface ObservableLazyOptions<D> {
 
@@ -38,26 +38,29 @@ export function useObservableLazy<D>(options: ObservableLazyOptions<D>) {
     return event
 }
 
-export interface ObservingOptions<D> extends ObservableLazyOptions<D> {
+export interface ObservingOptions<D, P> extends ObservableLazyOptions<D> {
 
+    readonly passthrough?: P | undefined
     readonly overrides?: LazyOverrides | undefined
 
 }
 
-export function observing<I extends {}, D, K extends string>(key: K, factory: (props: I) => ObservingOptions<D>) {
-    return lazified(key, (props: I) => {
+export function observing<I extends {}, D extends {}, P extends {}>(factory: (props: I) => ObservingOptions<D, P>) {
+    return lazified2((props: I) => {
         const options = factory(props)
         const event = useObservableLazy(options)
         return {
             event,
+            passthrough: options.passthrough,
             overrides: options.overrides,
         }
     })
 }
 
-export interface ObservingProps<D> extends ObservingOptions<D> {
+export interface ObservingProps<D> extends ObservableLazyOptions<D> {
 
     readonly children: (value: D) => ReactNode
+    readonly overrides?: LazyOverrides | undefined
 
 }
 
