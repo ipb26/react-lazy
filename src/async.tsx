@@ -72,7 +72,7 @@ export type AsyncifiedPass<K extends string, D> = KeyProps<K, AsyncValue<D>>
 
 export interface AsyncifiedOptions<D> extends AsyncOptions<D> {
 
-    readonly overrides?: ValueOrFactory<LazyOverrides, []> | undefined
+    readonly overrides?: LazyOverrides | undefined
 
 }
 
@@ -81,9 +81,8 @@ export function asyncified<I extends {}, D, K extends string>(key: K, factory: (
         return (props: I) => {
             const options = factory(props)
             const event = useAsyncLazy(options)
-            const overrides = callOrGet(options.overrides)
             return <Lazy event={event}
-                overrides={[overrides]}
+                overrides={options.overrides}
                 children={value => createElement(component, { ...props, ...addProps(key, value) })} />
         }
     }
@@ -98,6 +97,6 @@ export type AsyncifiedProps<D> = AsyncifiedOptions<D> & {
 export const Asyncified = <D,>(props: AsyncifiedProps<D>) => {
     const event = useAsyncLazy(props)
     return <Lazy event={event}
-        overrides={[callOrGet(props.overrides)]}
+        overrides={props.overrides}
         children={value => props.children(value)} />
 }

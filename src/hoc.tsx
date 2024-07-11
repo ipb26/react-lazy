@@ -17,7 +17,7 @@ export function lazified<I extends {}, D, K extends string>(key: K, build: (prop
         return (props: I) => {
             const built = build(props)
             return <Lazy event={built.event}
-                overrides={[built.overrides]}
+                overrides={built.overrides}
                 children={value => createElement(component, { ...props, ...addProps(key, value) })} />
         }
     }

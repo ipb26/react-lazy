@@ -64,6 +64,6 @@ export interface ObservingProps<D> extends ObservingOptions<D> {
 export const Observing = <D,>(props: ObservingProps<D>) => {
     const event = useObservableLazy(props)
     return <Lazy event={event}
-        overrides={[props.overrides]}
+        overrides={props.overrides}
         children={value => props.children(value)} />
 }

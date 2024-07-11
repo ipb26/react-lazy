@@ -7,7 +7,7 @@ import { LazyEvent, LazyOptions, LazyOverrides, LazySettled } from "./types"
 export interface LazyProps<D> {
 
     readonly event: LazyEvent<D>
-    readonly overrides?: (LazyOverrides | undefined)[] | undefined
+    readonly overrides?: LazyOverrides | undefined
     readonly children: (value: D) => ReactNode
 
 }
