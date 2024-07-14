@@ -1,7 +1,7 @@
 
 import { PropsWithChildren, ReactNode, useContext, useEffect, useState } from "react"
 import { LazyContext } from "./hooks"
-import { useDelayed } from "./internal"
+import { useElapsed } from "./internal"
 import { LazyEvent, LazyOptions, LazyOverrides, LazySettled } from "./types"
 
 export interface LazyProps<D> {
@@ -21,7 +21,7 @@ function useLazyState<D>(event: LazyEvent<D>, options: LazyOptions) {
     }, [
         event
     ])
-    const ready = useDelayed(event.status === "loading" ? options.delay ?? 0 : 0)
+    const ready = useElapsed(event.status === "loading" ? options.delay ?? 0 : 0)
     if (!ready) {
         if (settled === undefined) {
             return {

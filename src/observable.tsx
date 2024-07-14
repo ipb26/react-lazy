@@ -1,7 +1,7 @@
 
 import { ReactNode, useEffect, useState } from "react"
 import { Observable } from "rxjs"
-import { Lazy, LazyEvent, LazyOverrides, lazified2 } from "."
+import { Lazy, LazyEvent, LazyOverrides, lazified } from "."
 
 export interface ObservableLazyOptions<D> {
 
@@ -46,7 +46,7 @@ export interface ObservingOptions<D, P> extends ObservableLazyOptions<D> {
 }
 
 export function observing<I extends {}, D extends {}, P extends {}>(factory: (props: I) => ObservingOptions<D, P>) {
-    return lazified2((props: I) => {
+    return lazified((props: I) => {
         const options = factory(props)
         const event = useObservableLazy(options)
         return {
