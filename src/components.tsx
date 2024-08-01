@@ -63,18 +63,18 @@ export function Lazy<D>(props: LazyProps<D>): ReactNode {
     const context = useContext(LazyContext)
     const options = { ...context, ...props.overrides }
     const state = useLazyState(props.event, options)
+    if (state.status === "loading") {
+        if (options.onLoading === undefined) {
+            return null
+        }
+        return options.onLoading()
+    }
     const onReloading = options.onReloading ?? ((props: PropsWithChildren) => props.children)
     return onReloading({
         reloading: state.status === "reloading",
         children: (() => {
             if (state.status === "invisible") {
                 return null
-            }
-            else if (state.status === "loading") {
-                if (options.onLoading === undefined) {
-                    return null
-                }
-                return options.onLoading()
             }
             else if (state.status === "reloading") {
                 if (state.settled.status === "rejected") {

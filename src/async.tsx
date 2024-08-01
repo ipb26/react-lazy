@@ -16,8 +16,7 @@ export type AsyncOptions<D> = {
 
 }
 
-//TODO private
-export function useAsync<D>(options: AsyncOptions<D>) {
+export function useAsyncLazy<D>(options: AsyncOptions<D>) {
     const [promise, setPromise] = useState<PromiseLike<D>>()
     const [state, setResult] = useState<LazyEvent<D>>(() => {
         return {
@@ -52,10 +51,6 @@ export function useAsync<D>(options: AsyncOptions<D>) {
         promise
     ])
     return state
-}
-
-export function useAsyncLazy<D>(options: AsyncOptions<D>) {
-    return useAsync(options)
 }
 
 export interface AsyncifiedOptions<D, P> extends AsyncOptions<D> {
