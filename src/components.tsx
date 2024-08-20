@@ -8,7 +8,7 @@ export interface LazyProps<D> {
 
     readonly event: LazyEvent<D>
     readonly overrides?: LazyOverrides | undefined
-    readonly children: (value: D) => ReactNode
+    readonly children: ReactNode | ((value: D) => ReactNode)
 
 }
 
@@ -84,7 +84,7 @@ export function Lazy<D>(props: LazyProps<D>): ReactNode {
                     return options.onError({ reason: state.settled.reason })
                 }
                 else {
-                    return props.children(state.settled.value)
+                    return typeof props.children === "function" ? props.children(state.settled.value) : props.children
                 }
             }
             else {
@@ -95,7 +95,7 @@ export function Lazy<D>(props: LazyProps<D>): ReactNode {
                     return options.onError({ reason: state.reason })
                 }
                 else {
-                    return props.children(state.value)
+                    return typeof props.children === "function" ? props.children(state.value) : props.children
                 }
             }
         })()
