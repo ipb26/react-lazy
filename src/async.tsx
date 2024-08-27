@@ -23,12 +23,8 @@ export function useAsyncLazy<D>(options: AsyncOptions<D>) {
             status: "loading",
         }
     })
-    const run = useCallback(async () => setPromise(callOrGet(options.promise)), [options.promise])
-    useEffect(() => {
-        run()
-    }, [
-        run
-    ])
+    const run = useCallback(() => setPromise(callOrGet(options.promise)), [options.promise])
+    useEffect(run, [run])
     useEffect(() => {
         if (promise !== undefined) {
             setResult({
