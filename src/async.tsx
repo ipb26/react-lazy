@@ -10,20 +10,17 @@ import { Lazy, LazyEvent, LazyOverrides, lazified } from "."
 export type AsyncOptions<D> = {
 
     /**
-     * A function that returns a promise. This MUST be memoized - it will re-run every time a new value is received. Use the useCallback hook.
+     * A promise or a function that returns a promise. This MUST be memoized - the function will re-run every time a new value is received.
      */
     readonly promise: ValueOrFactory<PromiseLike<D>>
 
 }
 
-export function useAsyncLazy<D>(options: AsyncOptions<D>) {
+export function useAsyncLazy<D>(options: AsyncOptions<D> | (() => PromiseLike<D>)) {
     const [promise, setPromise] = useState<PromiseLike<D>>()
-    const [state, setResult] = useState<LazyEvent<D>>(() => {
-        return {
-            status: "loading",
-        }
-    })
-    const run = useCallback(() => setPromise(callOrGet(options.promise)), [options.promise])
+    const [state, setResult] = useState<LazyEvent<D>>({ status: "loading" })
+    const promiseOption = typeof options === "function" ? options : options.promise
+    const run = useCallback(() => setPromise(callOrGet(promiseOption)), [promiseOption])
     useEffect(run, [run])
     useEffect(() => {
         if (promise !== undefined) {
@@ -68,9 +65,13 @@ export function asyncified<I extends {}, D extends {}, P extends {}>(factory: (p
     })
 }
 
-export type AsyncifiedProps<D> = AsyncOptions<D> & {
+export interface AsyncifiedProps<D> extends AsyncOptions<D> {
 
-    readonly children: (value: D) => ReactNode
+    readonly children: ValueOrFactory<ReactNode, [D]>
+
+    /**
+     * The lazy overrides.
+     */
     readonly overrides?: LazyOverrides | undefined
 
 }
@@ -79,5 +80,5 @@ export const Asyncified = <D,>(props: AsyncifiedProps<D>) => {
     const event = useAsyncLazy(props)
     return <Lazy event={event}
         overrides={props.overrides}
-        children={value => props.children(value)} />
+        children={value => callOrGet(props.children, value)} />
 }

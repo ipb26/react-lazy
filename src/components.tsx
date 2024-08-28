@@ -2,7 +2,7 @@
 import { PropsWithChildren, ReactNode, useContext, useEffect, useState } from "react"
 import { LazyContext } from "./hooks"
 import { useElapsed } from "./internal"
-import { LazyEvent, LazyOptions, LazyOverrides, LazySettled } from "./types"
+import { LazyEvent, LazyOverrides, LazySettled } from "./types"
 
 export interface LazyProps<D> {
 
@@ -12,7 +12,21 @@ export interface LazyProps<D> {
 
 }
 
-function useLazyState<D>(event: LazyEvent<D>, options: LazyOptions) {
+type LazyState<D> = {
+    readonly status: "invisible"
+} | {
+    readonly status: "loading"
+} | {
+    readonly status: "reloading"
+    readonly data: LazySettled<D>
+} | {
+    readonly status: "settled"
+    readonly data: LazySettled<D>
+}
+
+export function useLazyState<D>(event: LazyEvent<D>, overrides?: LazyOverrides | undefined): LazyState<D> {
+    const context = useContext(LazyContext)
+    const options = { ...context, ...overrides }
     const [settled, setSettled] = useState<LazySettled<D>>()
     useEffect(() => {
         if (event.status === "fulfilled" || event.status === "rejected") {
@@ -25,36 +39,31 @@ function useLazyState<D>(event: LazyEvent<D>, options: LazyOptions) {
     if (!ready) {
         if (settled === undefined) {
             return {
-                status: "invisible" as const
+                status: "invisible",
             }
         }
-        return settled
+        return {
+            status: "settled",
+            data: settled,
+        }
     }
     if (event.status === "loading") {
         if (settled === undefined) {
             return {
-                status: "loading" as const
+                status: "loading",
             }
         }
         else {
             return {
-                status: "reloading" as const,
-                settled
+                status: "reloading",
+                data: settled
             }
         }
     }
     else {
-        if (event.status === "rejected") {
-            return {
-                status: "rejected" as const,
-                reason: event.reason
-            }
-        }
-        else {
-            return {
-                status: "fulfilled" as const,
-                value: event.value
-            }
+        return {
+            status: "settled",
+            data: event
         }
     }
 }
@@ -62,7 +71,7 @@ function useLazyState<D>(event: LazyEvent<D>, options: LazyOptions) {
 export function Lazy<D>(props: LazyProps<D>): ReactNode {
     const context = useContext(LazyContext)
     const options = { ...context, ...props.overrides }
-    const state = useLazyState(props.event, options)
+    const state = useLazyState(props.event, props.overrides)
     if (state.status === "loading") {
         if (options.onLoading === undefined) {
             return null
@@ -77,25 +86,25 @@ export function Lazy<D>(props: LazyProps<D>): ReactNode {
                 return null
             }
             else if (state.status === "reloading") {
-                if (state.settled.status === "rejected") {
+                if (state.data.status === "rejected") {
                     if (options.onError === undefined) {
-                        throw state.settled.reason
+                        throw state.data.reason
                     }
-                    return options.onError({ reason: state.settled.reason })
+                    return options.onError({ reason: state.data.reason })
                 }
                 else {
-                    return typeof props.children === "function" ? props.children(state.settled.value) : props.children
+                    return typeof props.children === "function" ? props.children(state.data.value) : props.children
                 }
             }
             else {
-                if (state.status === "rejected") {
+                if (state.data.status === "rejected") {
                     if (options.onError === undefined) {
-                        throw state.reason
+                        throw state.data.reason
                     }
-                    return options.onError({ reason: state.reason })
+                    return options.onError({ reason: state.data.reason })
                 }
                 else {
-                    return typeof props.children === "function" ? props.children(state.value) : props.children
+                    return typeof props.children === "function" ? props.children(state.data.value) : props.children
                 }
             }
         })()
