@@ -25,25 +25,27 @@ export function useAsyncLazy<D>(options: AsyncOptions<D> | (() => PromiseLike<D>
     useEffect(() => {
         if (promise !== undefined) {
             setResult({
-                status: "loading"
+                status: "loading",
             })
             promise.then(value => {
                 setResult({
                     status: "fulfilled",
-                    value
+                    value,
                 })
             }, reason => {
                 setResult({
                     status: "rejected",
                     reason,
-                    retry: run,
                 })
             })
         }
     }, [
         promise
     ])
-    return state
+    return {
+        ...state,
+        retry: run,
+    }
 }
 
 export interface AsyncifiedOptions<D, P> extends AsyncOptions<D> {
@@ -65,9 +67,11 @@ export function asyncified<I extends {}, D extends {}, P extends {}>(factory: (p
     })
 }
 
+type Retry = () => void
+
 export interface AsyncifiedProps<D> extends AsyncOptions<D> {
 
-    readonly children: ValueOrFactory<ReactNode, [D]>
+    readonly children: ValueOrFactory<ReactNode, [D, Retry]>
 
     /**
      * The lazy overrides.
@@ -80,5 +84,5 @@ export const Asyncified = <D,>(props: AsyncifiedProps<D>) => {
     const event = useAsyncLazy(props)
     return <Lazy event={event}
         overrides={props.overrides}
-        children={value => callOrGet(props.children, value)} />
+        children={value => callOrGet(props.children, value, event.retry)} />
 }
