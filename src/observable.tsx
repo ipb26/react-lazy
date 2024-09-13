@@ -1,21 +1,35 @@
 
 import { ReactNode, useEffect, useState } from "react"
-import { Observable } from "rxjs"
-import { Lazy, LazyEvent, LazyOverrides, lazified } from "."
+import { combineLatest, isObservable, Observable, ObservableInput, ObservedValueOf } from "rxjs"
+import { lazified, Lazy, LazyEvent, LazyOverrides } from "."
 
-export interface ObservableLazyOptions<D> {
+//
+export type ObservableLazyInput = Observable<any> | Record<string, ObservableInput<any>>
+export type ObservableLazyOutput<X extends ObservableLazyInput> = X extends Observable<any> ? ObservedValueOf<X> : { [K in keyof X]: ObservedValueOf<X[K]> }
 
-    readonly of: Observable<D>
+export interface ObservableLazyOptions<D extends ObservableLazyInput> {
+
+    readonly of: D
 
 }
 
-export function useObservableLazy<D>(options: ObservableLazyOptions<D>) {
-    const [event, setEvent] = useState<LazyEvent<D>>({ status: "loading" as const })
+function proc<X extends ObservableLazyInput>(d: X): Observable<ObservableLazyOutput<X>> {
+    if (!isObservable(d)) {
+        //@ts-ignore
+        return combineLatest(d)
+    }
+    //@ts-ignore
+    return d
+}
+
+export function useObservableLazy<D extends ObservableLazyInput>(options: ObservableLazyOptions<D>) {
+    const [event, setEvent] = useState<LazyEvent<ObservableLazyOutput<D>>>({ status: "loading" as const })
     useEffect(() => {
         setEvent({
             status: "loading"
         })
-        const sub = options.of.subscribe({
+        const observable = proc(options.of)
+        const sub = observable.subscribe({
             next: value => {
                 setEvent({
                     status: "fulfilled",
@@ -38,7 +52,7 @@ export function useObservableLazy<D>(options: ObservableLazyOptions<D>) {
     return event
 }
 
-export interface ObservingOptions<D, P> extends ObservableLazyOptions<D> {
+export interface ObservingOptions<D extends ObservableLazyInput, P> extends ObservableLazyOptions<D> {
 
     readonly passthrough?: P | undefined
     readonly overrides?: LazyOverrides | undefined
@@ -57,14 +71,14 @@ export function observing<I extends {}, D extends {}, P extends {}>(factory: (pr
     })
 }
 
-export interface ObservingProps<D> extends ObservableLazyOptions<D> {
+export interface ObservingProps<D extends ObservableLazyInput> extends ObservableLazyOptions<D> {
 
-    readonly children: (value: D) => ReactNode
+    readonly children: (value: ObservableLazyOutput<D>) => ReactNode
     readonly overrides?: LazyOverrides | undefined
 
 }
 
-export const Observing = <D,>(props: ObservingProps<D>) => {
+export const Observing = <D extends ObservableLazyInput>(props: ObservingProps<D>) => {
     const event = useObservableLazy(props)
     return <Lazy event={event}
         overrides={props.overrides}
