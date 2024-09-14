@@ -76,11 +76,12 @@ export function Lazy<D>(props: LazyProps<D>): ReactNode {
         if (options.onLoading === undefined) {
             return null
         }
-        return options.onLoading()
+        return options.onLoading({ message: options.loadingMessage })
     }
     const onReloading = options.onReloading ?? ((props: PropsWithChildren) => props.children)
     return onReloading({
         reloading: state.status === "reloading",
+        message: options.reloadingMessage,
         children: (() => {
             if (state.status === "invisible") {
                 return null
@@ -90,7 +91,7 @@ export function Lazy<D>(props: LazyProps<D>): ReactNode {
                     if (options.onError === undefined) {
                         throw state.data.reason
                     }
-                    return options.onError({ reason: state.data.reason })
+                    return options.onError({ reason: state.data.reason, message: options.errorMessage })
                 }
                 else {
                     return typeof props.children === "function" ? props.children(state.data.value) : props.children
@@ -101,7 +102,7 @@ export function Lazy<D>(props: LazyProps<D>): ReactNode {
                     if (options.onError === undefined) {
                         throw state.data.reason
                     }
-                    return options.onError({ reason: state.data.reason })
+                    return options.onError({ reason: state.data.reason, message: options.errorMessage })
                 }
                 else {
                     return typeof props.children === "function" ? props.children(state.data.value) : props.children

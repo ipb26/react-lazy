@@ -2,6 +2,7 @@
 import { ReactNode, useCallback, useEffect, useState } from "react"
 import { ValueOrFactory, callOrGet } from "value-or-factory"
 import { Lazy, LazyEvent, LazyOverrides, lazified } from "."
+import { useIsFirstMount } from "./internal"
 
 /**
  * Options for the async hook.
@@ -21,7 +22,14 @@ export function useAsyncLazy<D>(options: AsyncOptions<D> | (() => PromiseLike<D>
     const [state, setResult] = useState<LazyEvent<D>>({ status: "loading" })
     const promiseOption = typeof options === "function" ? options : options.promise
     const run = useCallback(() => setPromise(callOrGet(promiseOption)), [promiseOption])
-    useEffect(run, [run])
+    const firstMount = useIsFirstMount()
+    useEffect(() => {
+        if (firstMount) {
+            run()
+        }
+    }, [
+        run
+    ])
     useEffect(() => {
         if (promise !== undefined) {
             setResult({
