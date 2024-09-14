@@ -1,6 +1,7 @@
 
-import { ReactNode, useEffect, useState } from "react"
+import { ReactNode, useState } from "react"
 import { combineLatest, isObservable, Observable, ObservableInput, ObservedValueOf } from "rxjs"
+import { useDeepCompareEffect } from "state-hooks"
 import { lazified, Lazy, LazyEvent, LazyOverrides } from "."
 
 //
@@ -24,7 +25,7 @@ function proc<X extends ObservableLazyInput>(d: X): Observable<ObservableLazyOut
 
 export function useObservableLazy<D extends ObservableLazyInput>(options: ObservableLazyOptions<D>) {
     const [event, setEvent] = useState<LazyEvent<ObservableLazyOutput<D>>>({ status: "loading" as const })
-    useEffect(() => {
+    useDeepCompareEffect(() => {
         setEvent({
             status: "loading"
         })
