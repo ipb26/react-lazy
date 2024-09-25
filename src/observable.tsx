@@ -1,35 +1,26 @@
 
 import { ReactNode, useState } from "react"
-import { combineLatest, isObservable, Observable, ObservableInput, ObservedValueOf } from "rxjs"
+import { Observable, ObservedValueOf } from "rxjs"
 import { useDeepCompareEffect } from "state-hooks"
 import { lazified, Lazy, LazyEvent, LazyOverrides } from "."
 
 //
-export type ObservableLazyInput = Observable<any> | Record<string, ObservableInput<any>>
+export type ObservableLazyInput = Observable<any>// | Record<string, ObservableInput<any>>
 export type ObservableLazyOutput<X extends ObservableLazyInput> = X extends Observable<any> ? ObservedValueOf<X> : { [K in keyof X]: ObservedValueOf<X[K]> }
 
-export interface ObservableLazyOptions<D extends ObservableLazyInput> {
+export interface ObservableLazyOptions<D> {
 
-    readonly of: D
+    readonly of: Observable<D>
 
 }
 
-function proc<X extends ObservableLazyInput>(d: X): Observable<ObservableLazyOutput<X>> {
-    if (!isObservable(d)) {
-        //@ts-ignore
-        return combineLatest(d)
-    }
-    //@ts-ignore
-    return d
-}
-
-export function useObservableLazy<D extends ObservableLazyInput>(options: ObservableLazyOptions<D>) {
-    const [event, setEvent] = useState<LazyEvent<ObservableLazyOutput<D>>>({ status: "loading" as const })
+export function useObservableLazy<D>(options: ObservableLazyOptions<D>) {
+    const [event, setEvent] = useState<LazyEvent<D>>({ status: "loading" as const })
     useDeepCompareEffect(() => {
         setEvent({
             status: "loading"
         })
-        const observable = proc(options.of)
+        const observable = options.of
         const sub = observable.subscribe({
             next: value => {
                 setEvent({
@@ -53,7 +44,7 @@ export function useObservableLazy<D extends ObservableLazyInput>(options: Observ
     return event
 }
 
-export interface ObservingOptions<D extends ObservableLazyInput, P> extends ObservableLazyOptions<D> {
+export interface ObservingOptions<D, P> extends ObservableLazyOptions<D> {
 
     readonly passthrough?: P | undefined
     readonly overrides?: LazyOverrides | undefined
@@ -72,14 +63,14 @@ export function observing<I extends {}, D extends {}, P extends {}>(factory: (pr
     })
 }
 
-export interface ObservingProps<D extends ObservableLazyInput> extends ObservableLazyOptions<D> {
+export interface ObservingProps<D> extends ObservableLazyOptions<D> {
 
-    readonly children: (value: ObservableLazyOutput<D>) => ReactNode
+    readonly children: (value: D) => ReactNode
     readonly overrides?: LazyOverrides | undefined
 
 }
 
-export const Observing = <D extends ObservableLazyInput>(props: ObservingProps<D>) => {
+export const Observing = <D,>(props: ObservingProps<D>) => {
     const event = useObservableLazy(props)
     return <Lazy event={event}
         overrides={props.overrides}
