@@ -79,7 +79,7 @@ type Retry = () => void
 
 export interface AsyncifiedProps<D> extends AsyncOptions<D> {
 
-    readonly children: ValueOrFactory<ReactNode, [D, Retry]>
+    readonly children: ValueOrFactory<ReactNode, [D, boolean, Retry]>
 
     /**
      * The lazy overrides.
@@ -92,5 +92,5 @@ export const Asyncified = <D,>(props: AsyncifiedProps<D>) => {
     const event = useAsyncLazy(props)
     return <Lazy event={event}
         overrides={props.overrides}
-        children={value => callOrGet(props.children, value, event.retry)} />
+        children={(value, reloading) => callOrGet(props.children, value, reloading, event.retry)} />
 }
