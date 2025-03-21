@@ -58,7 +58,7 @@ export function useAsyncLazy<D>(options: AsyncOptions<D> | (() => PromiseLike<D>
 
 export interface AsyncifiedOptions<D, P> extends AsyncOptions<D> {
 
-    readonly passthrough?: P | undefined
+    readonly passthrough: P
     readonly overrides?: LazyOverrides | undefined
 
 }

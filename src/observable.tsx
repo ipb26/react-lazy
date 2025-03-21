@@ -46,7 +46,7 @@ export function useObservableLazy<D>(options: ObservableLazyOptions<D>) {
 
 export interface ObservingOptions<D, P> extends ObservableLazyOptions<D> {
 
-    readonly passthrough?: P | undefined
+    readonly passthrough: P
     readonly overrides?: LazyOverrides | undefined
 
 }

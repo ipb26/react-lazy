@@ -5,7 +5,7 @@ import { Lazy, LazyEvent, LazyOverrides } from "."
 export type LazyBuilder<D, P> = {
 
     readonly event: LazyEvent<D>
-    readonly passthrough?: P | undefined // TODO make this conditionally optional
+    readonly passthrough: P
     readonly overrides?: LazyOverrides | undefined
 
 }
