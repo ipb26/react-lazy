@@ -1,11 +1,12 @@
 
 import { ComponentType, createElement } from "react"
-import { Lazy, LazyEvent, LazyOverrides } from "."
+import { callOrGet, ValueOrFactory } from "value-or-factory"
+import { Lazy, LazyEvent, LazyOverrides, LazyState } from "."
 
 export type LazyBuilder<D, P> = {
 
     readonly event: LazyEvent<D>
-    readonly passthrough: P
+    readonly passthrough: ValueOrFactory<P, [LazyState<D>]>
     readonly overrides?: LazyOverrides | undefined
 
 }
@@ -16,7 +17,7 @@ export function lazified<I extends {}, D extends {}, P extends {}>(build: (props
             const built = build(props)
             return <Lazy event={built.event}
                 overrides={built.overrides}
-                children={value => createElement(component, { ...built.passthrough!, ...value })} />
+                children={(value, state) => createElement(component, { ...callOrGet(built.passthrough, state), ...value })} />
         }
     }
 }

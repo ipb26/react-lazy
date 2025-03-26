@@ -21,8 +21,18 @@ export function useElapsed(ms: number) {
                 clearTimeout(timer)
             }
         }
+        else {
+            setReady(true)
+        }
     }, [
         ms
+    ])
+    useEffect(() => {
+        if (ready) {
+            setReady(false)
+        }
+    }, [
+        ready
     ])
     return ready
 }

@@ -2,7 +2,8 @@
 import { ReactNode, useState } from "react"
 import { Observable, ObservedValueOf } from "rxjs"
 import { useDeepCompareEffect } from "state-hooks"
-import { lazified, Lazy, LazyEvent, LazyOverrides } from "."
+import { ValueOrFactory } from "value-or-factory"
+import { lazified, Lazy, LazyEvent, LazyOverrides, LazyState } from "."
 
 //
 export type ObservableLazyInput = Observable<any>// | Record<string, ObservableInput<any>>
@@ -46,7 +47,7 @@ export function useObservableLazy<D>(options: ObservableLazyOptions<D>) {
 
 export interface ObservingOptions<D, P> extends ObservableLazyOptions<D> {
 
-    readonly passthrough: P
+    readonly passthrough: ValueOrFactory<P, [LazyState<D>]>
     readonly overrides?: LazyOverrides | undefined
 
 }
@@ -65,7 +66,7 @@ export function observing<I extends {}, D extends {}, P extends {}>(factory: (pr
 
 export interface ObservingProps<D> extends ObservableLazyOptions<D> {
 
-    readonly children: (value: D) => ReactNode
+    readonly children: (value: D, state: LazyState<D>) => ReactNode
     readonly overrides?: LazyOverrides | undefined
 
 }
@@ -74,5 +75,5 @@ export const Observing = <D,>(props: ObservingProps<D>) => {
     const event = useObservableLazy(props)
     return <Lazy event={event}
         overrides={props.overrides}
-        children={value => props.children(value)} />
+        children={props.children} />
 }

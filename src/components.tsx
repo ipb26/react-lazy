@@ -1,70 +1,94 @@
 
 import { PropsWithChildren, ReactNode, useContext, useEffect, useState } from "react"
 import { LazyContext } from "./hooks"
-import { useElapsed } from "./internal"
 import { LazyEvent, LazyOverrides, LazySettled } from "./types"
 
 export interface LazyProps<D> {
 
     readonly event: LazyEvent<D>
     readonly overrides?: LazyOverrides | undefined
-    readonly children: ReactNode | ((value: D, reloading: boolean) => ReactNode)
+    readonly children: ReactNode | ((value: D, state: LazyState<D>) => ReactNode)
 
 }
 
-type LazyState<D> = {
+export type LazyState<D> = {
     readonly status: "invisible"
+    readonly isLoading: true
+    readonly isSettled: false
 } | {
     readonly status: "loading"
+    readonly isLoading: true
+    readonly isSettled: false
 } | {
     readonly status: "reloading"
     readonly data: LazySettled<D>
+    readonly isLoading: true
+    readonly isSettled: true
 } | {
     readonly status: "settled"
     readonly data: LazySettled<D>
+    readonly isLoading: false
+    readonly isSettled: true
 }
 
-export function useLazyState<D>(event: LazyEvent<D>, overrides?: LazyOverrides | undefined): LazyState<D> {
+export function useLazyState<D>(newEvent: LazyEvent<D>, overrides?: LazyOverrides | undefined): LazyState<D> {
     const context = useContext(LazyContext)
     const options = { ...context, ...overrides }
     const [settled, setSettled] = useState<LazySettled<D>>()
+    const [event, setEvent] = useState<LazyEvent<D>>()
     useEffect(() => {
+        if (event === undefined) {
+            return
+        }
         if (event.status === "fulfilled" || event.status === "rejected") {
             setSettled(event)
         }
     }, [
         event
     ])
-    const ready = useElapsed(event.status === "loading" ? options.delay ?? 0 : 0)
-    if (!ready) {
-        if (settled === undefined) {
-            return {
-                status: "invisible",
+    useEffect(() => {
+        const delay = newEvent.status === "loading" ? options.delay ?? 0 : 0
+        if (delay > 0) {
+            const timer = setTimeout(() => setEvent(newEvent), delay)
+            return () => {
+                clearTimeout(timer)
             }
         }
+        else {
+            setEvent(newEvent)
+        }
+    }, [
+        newEvent
+    ])
+    if (event === undefined) {
         return {
-            status: "settled",
-            data: settled,
+            status: "invisible",
+            isLoading: true,
+            isSettled: false,
         }
     }
     if (event.status === "loading") {
         if (settled === undefined) {
             return {
                 status: "loading",
+                isLoading: true,
+                isSettled: false,
             }
         }
         else {
             return {
                 status: "reloading",
+                isLoading: true,
+                isSettled: true,
                 data: settled
             }
         }
     }
-    else {
-        return {
-            status: "settled",
-            data: event
-        }
+    return {
+        status: "settled",
+        isLoading: false,
+        isSettled: true,
+        data: event
     }
 }
 
@@ -94,7 +118,7 @@ export function Lazy<D>(props: LazyProps<D>): ReactNode {
                     return options.onError({ reason: state.data.reason, message: options.errorMessage })
                 }
                 else {
-                    return typeof props.children === "function" ? props.children(state.data.value, true) : props.children
+                    return typeof props.children === "function" ? props.children(state.data.value, state) : props.children
                 }
             }
             else {
@@ -105,7 +129,7 @@ export function Lazy<D>(props: LazyProps<D>): ReactNode {
                     return options.onError({ reason: state.data.reason, message: options.errorMessage })
                 }
                 else {
-                    return typeof props.children === "function" ? props.children(state.data.value, false) : props.children
+                    return typeof props.children === "function" ? props.children(state.data.value, state) : props.children
                 }
             }
         })()

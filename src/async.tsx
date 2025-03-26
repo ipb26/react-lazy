@@ -1,8 +1,7 @@
 
 import { ReactNode, useCallback, useEffect, useState } from "react"
 import { ValueOrFactory, callOrGet } from "value-or-factory"
-import { Lazy, LazyEvent, LazyOverrides, lazified } from "."
-import { useIsFirstMount } from "./internal"
+import { Lazy, LazyEvent, LazyOverrides, LazyState, lazified } from "."
 
 /**
  * Options for the async hook.
@@ -18,47 +17,42 @@ export type AsyncOptions<D> = {
 }
 
 export function useAsyncLazy<D>(options: AsyncOptions<D> | (() => PromiseLike<D>)) {
-    const [promise, setPromise] = useState<PromiseLike<D>>()
+    const promise = typeof options === "function" ? options : options.promise
     const [state, setResult] = useState<LazyEvent<D>>({ status: "loading" })
-    const promiseOption = typeof options === "function" ? options : options.promise
-    const run = useCallback(() => setPromise(callOrGet(promiseOption)), [promiseOption])
-    const firstMount = useIsFirstMount()
-    useEffect(() => {
-        if (firstMount) {
-            run()
-        }
-    }, [
-        run
-    ])
-    useEffect(() => {
-        if (promise !== undefined) {
+    const retry = useCallback(() => {
+        setResult({
+            status: "loading"
+        })
+        callOrGet(promise).then(value => {
             setResult({
-                status: "loading",
+                status: "fulfilled",
+                value,
             })
-            promise.then(value => {
-                setResult({
-                    status: "fulfilled",
-                    value,
-                })
-            }, reason => {
-                setResult({
-                    status: "rejected",
-                    reason,
-                })
+        }, reason => {
+            setResult({
+                status: "rejected",
+                reason,
             })
-        }
+        })
     }, [
         promise
     ])
+    useEffect(() => {
+        retry()
+    }, [
+        retry
+    ])
     return {
         ...state,
-        retry: run,
+        retry
     }
 }
 
+export type AsyncLazyState<D> = LazyState<D> & { readonly retry: Retry }
+
 export interface AsyncifiedOptions<D, P> extends AsyncOptions<D> {
 
-    readonly passthrough: P
+    readonly passthrough: ValueOrFactory<P, [AsyncLazyState<D>]>
     readonly overrides?: LazyOverrides | undefined
 
 }
@@ -69,7 +63,7 @@ export function asyncified<I extends {}, D extends {}, P extends {}>(factory: (p
         const event = useAsyncLazy(options)
         return {
             event,
-            passthrough: options.passthrough,
+            passthrough: state => callOrGet(options.passthrough, { ...state, retry: event.retry }),
             overrides: options.overrides,
         }
     })
@@ -79,7 +73,7 @@ type Retry = () => void
 
 export interface AsyncifiedProps<D> extends AsyncOptions<D> {
 
-    readonly children: ValueOrFactory<ReactNode, [D, boolean, Retry]>
+    readonly children: ValueOrFactory<ReactNode, [D, AsyncLazyState<D>]>
 
     /**
      * The lazy overrides.
@@ -92,5 +86,5 @@ export const Asyncified = <D,>(props: AsyncifiedProps<D>) => {
     const event = useAsyncLazy(props)
     return <Lazy event={event}
         overrides={props.overrides}
-        children={(value, reloading) => callOrGet(props.children, value, reloading, event.retry)} />
+        children={(value, state) => callOrGet(props.children, value, { ...state, retry: event.retry })} />
 }
