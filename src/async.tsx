@@ -2,6 +2,7 @@
 import { ReactNode, useCallback, useEffect, useState } from "react"
 import { ValueOrFactory, callOrGet } from "value-or-factory"
 import { Lazy, LazyEvent, LazyOverrides, LazyState, lazified } from "."
+import { useIsFirstMount } from "./internal"
 
 /**
  * Options for the async hook.
@@ -14,16 +15,33 @@ export type AsyncOptions<D> = {
      */
     readonly promise: ValueOrFactory<PromiseLike<D>>
 
+    /**
+     * Don't execute immediately.
+     */
+    readonly defer?: AsyncDefer<D> | undefined
+
 }
 
-export function useAsyncLazy<D>(options: AsyncOptions<D> | (() => PromiseLike<D>)) {
-    const promise = typeof options === "function" ? options : options.promise
-    const [state, setResult] = useState<LazyEvent<D>>({ status: "loading" })
+interface AsyncDefer<D> {
+
+    /**
+     * The initial value to provide.
+     */
+    readonly initial: D
+
+}
+
+export type AsyncLazyEvent<D> = LazyEvent<D> & { readonly retry: Retry }
+
+export function useAsyncLazy<D>(input: AsyncOptions<D> | (() => PromiseLike<D>)): AsyncLazyEvent<D> {
+    const options = typeof input === "function" ? { promise: input } : input
+    const [state, setResult] = useState<LazyEvent<D>>(options.defer === undefined ? { status: "loading" } : { status: "fulfilled", value: options.defer.initial })
+    const isFirstMount = useIsFirstMount()
     const retry = useCallback(() => {
         setResult({
             status: "loading"
         })
-        callOrGet(promise).then(value => {
+        callOrGet(options.promise).then(value => {
             setResult({
                 status: "fulfilled",
                 value,
@@ -35,9 +53,12 @@ export function useAsyncLazy<D>(options: AsyncOptions<D> | (() => PromiseLike<D>
             })
         })
     }, [
-        promise
+        options.promise
     ])
     useEffect(() => {
+        if (isFirstMount && options.defer !== undefined) {
+            return
+        }
         retry()
     }, [
         retry
