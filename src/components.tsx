@@ -12,10 +12,6 @@ export interface LazyProps<D> {
 }
 
 export type LazyState<D> = {
-    readonly status: "invisible"
-    readonly isLoading: true
-    readonly isSettled: false
-} | {
     readonly status: "loading"
     readonly isLoading: true
     readonly isSettled: false
@@ -31,11 +27,9 @@ export type LazyState<D> = {
     readonly isSettled: true
 }
 
-export function useLazyState<D>(newEvent: LazyEvent<D>, overrides?: LazyOverrides | undefined): LazyState<D> {
-    const context = useContext(LazyContext)
-    const options = { ...context, ...overrides }
+export function useLazyState<D>(newEvent: LazyEvent<D>): LazyState<D> {
     const [settled, setSettled] = useState<LazySettled<D>>()
-    const [event, setEvent] = useState<LazyEvent<D>>()
+    const event = newEvent
     useEffect(() => {
         if (event === undefined) {
             return
@@ -46,27 +40,6 @@ export function useLazyState<D>(newEvent: LazyEvent<D>, overrides?: LazyOverride
     }, [
         event
     ])
-    useEffect(() => {
-        const delay = newEvent.status === "loading" ? options.delay ?? 0 : 0
-        if (delay > 0) {
-            const timer = setTimeout(() => setEvent(newEvent), delay)
-            return () => {
-                clearTimeout(timer)
-            }
-        }
-        else {
-            setEvent(newEvent)
-        }
-    }, [
-        newEvent
-    ])
-    if (event === undefined) {
-        return {
-            status: "invisible",
-            isLoading: true,
-            isSettled: false,
-        }
-    }
     if (event.status === "loading") {
         if (settled === undefined) {
             return {
@@ -95,7 +68,7 @@ export function useLazyState<D>(newEvent: LazyEvent<D>, overrides?: LazyOverride
 export function Lazy<D>(props: LazyProps<D>): ReactNode {
     const context = useContext(LazyContext)
     const options = { ...context, ...props.overrides }
-    const state = useLazyState(props.event, props.overrides)
+    const state = useLazyState(props.event)
     if (state.status === "loading") {
         if (options.onLoading === undefined) {
             return null
@@ -107,9 +80,16 @@ export function Lazy<D>(props: LazyProps<D>): ReactNode {
         reloading: state.status === "reloading",
         message: options.reloadingMessage,
         children: (() => {
-            if (state.status === "invisible") {
-                return null
+            if (state.data.status === "rejected") {
+                if (options.onError === undefined) {
+                    throw state.data.reason
+                }
+                return options.onError({ reason: state.data.reason, message: options.errorMessage })
             }
+            else {
+                return typeof props.children === "function" ? props.children(state.data.value, state) : props.children
+            }
+            /*
             else if (state.status === "reloading") {
                 if (state.data.status === "rejected") {
                     if (options.onError === undefined) {
@@ -131,7 +111,7 @@ export function Lazy<D>(props: LazyProps<D>): ReactNode {
                 else {
                     return typeof props.children === "function" ? props.children(state.data.value, state) : props.children
                 }
-            }
+            }*/
         })()
     })
 }

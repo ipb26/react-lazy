@@ -10,12 +10,14 @@ export type OnLoading = (props: LoadingProps) => ReactNode
 export type OnReloading = (props: ReloadingProps) => ReactNode
 export type OnError = (props: ErrorProps) => ReactNode
 
+type LazyMeta = string
+
 export interface LoadingProps {
 
     /**
      * The message to display.
      */
-    readonly message?: string | undefined
+    readonly message?: LazyMeta | undefined
 
 }
 
@@ -29,7 +31,7 @@ export interface ReloadingProps {
     /**
      * The message to display.
      */
-    readonly message?: string | undefined
+    readonly message?: LazyMeta | undefined
 
     readonly children: ReactNode
 
@@ -37,12 +39,15 @@ export interface ReloadingProps {
 
 export interface ErrorProps {
 
+    /**
+     * The error.
+     */
     readonly reason: unknown
 
     /**
      * The message to display.
      */
-    readonly message?: string | undefined
+    readonly message?: LazyMeta | undefined
 
 }
 
@@ -52,14 +57,14 @@ export interface LazyOptions {
     readonly onReloading?: OnReloading | undefined
     readonly onError?: OnError | undefined
 
-    readonly loadingMessage?: string | undefined
-    readonly reloadingMessage?: string | undefined
-    readonly errorMessage?: string | undefined
+    readonly loadingMessage?: LazyMeta | undefined
+    readonly reloadingMessage?: LazyMeta | undefined
+    readonly errorMessage?: LazyMeta | undefined
 
     /**
      * Hides loading and reloading components for this amount of time.
      */
-    readonly delay?: number | undefined
+    //readonly delay?: number | undefined
 
 }
 

@@ -1,7 +1,7 @@
 
 import { ReactNode, useCallback, useEffect, useState } from "react"
 import { ValueOrFactory, callOrGet } from "value-or-factory"
-import { Lazy, LazyEvent, LazyOverrides, LazyState, lazified } from "."
+import { Lazy, LazyEvent, LazyHOCOptions, LazyOverrides, LazyState, lazified } from "."
 import { useIsFirstMount } from "./internal"
 
 /**
@@ -38,9 +38,11 @@ export function useAsyncLazy<D>(input: AsyncOptions<D> | (() => PromiseLike<D>))
     const [state, setResult] = useState<LazyEvent<D>>(options.defer === undefined ? { status: "loading" } : { status: "fulfilled", value: options.defer.initial })
     const isFirstMount = useIsFirstMount()
     const retry = useCallback(() => {
-        setResult({
-            status: "loading"
-        })
+        if (!isFirstMount) {
+            setResult({
+                status: "loading"
+            })
+        }
         callOrGet(options.promise).then(value => {
             setResult({
                 status: "fulfilled",
@@ -71,11 +73,7 @@ export function useAsyncLazy<D>(input: AsyncOptions<D> | (() => PromiseLike<D>))
 
 export type AsyncLazyState<D> = LazyState<D> & { readonly retry: Retry }
 
-export interface AsyncifiedOptions<D, P> extends AsyncOptions<D> {
-
-    readonly passthrough: ValueOrFactory<P, [AsyncLazyState<D>]>
-    readonly overrides?: LazyOverrides | undefined
-
+export interface AsyncifiedOptions<D, P> extends AsyncOptions<D>, LazyHOCOptions<AsyncLazyState<D>, P> {
 }
 
 export function asyncified<I extends {}, D extends {}, P extends {}>(factory: (props: I) => AsyncifiedOptions<D, P>) {

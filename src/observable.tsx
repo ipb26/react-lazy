@@ -1,9 +1,8 @@
 
-import { ReactNode, useState } from "react"
+import { ReactNode, useEffect, useState } from "react"
 import { Observable, ObservedValueOf } from "rxjs"
-import { useDeepCompareEffect } from "state-hooks"
-import { ValueOrFactory } from "value-or-factory"
-import { lazified, Lazy, LazyEvent, LazyOverrides, LazyState } from "."
+import { lazified, Lazy, LazyEvent, LazyHOCOptions, LazyOverrides, LazyState } from "."
+import { useIsFirstMount } from "./internal"
 
 //
 export type ObservableLazyInput = Observable<any>// | Record<string, ObservableInput<any>>
@@ -17,12 +16,14 @@ export interface ObservableLazyOptions<D> {
 
 export function useObservableLazy<D>(options: ObservableLazyOptions<D>) {
     const [event, setEvent] = useState<LazyEvent<D>>({ status: "loading" as const })
-    useDeepCompareEffect(() => {
-        setEvent({
-            status: "loading"
-        })
-        const observable = options.of
-        const sub = observable.subscribe({
+    const isFirstMount = useIsFirstMount()
+    useEffect(() => {
+        if (!isFirstMount) {
+            setEvent({
+                status: "loading"
+            })
+        }
+        const sub = options.of.subscribe({
             next: value => {
                 setEvent({
                     status: "fulfilled",
@@ -45,11 +46,7 @@ export function useObservableLazy<D>(options: ObservableLazyOptions<D>) {
     return event
 }
 
-export interface ObservingOptions<D, P> extends ObservableLazyOptions<D> {
-
-    readonly passthrough: ValueOrFactory<P, [LazyState<D>]>
-    readonly overrides?: LazyOverrides | undefined
-
+export interface ObservingOptions<D, P> extends ObservableLazyOptions<D>, LazyHOCOptions<LazyState<D>, P> {
 }
 
 export function observing<I extends {}, D extends {}, P extends {}>(factory: (props: I) => ObservingOptions<D, P>) {
