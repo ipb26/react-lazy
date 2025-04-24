@@ -33,6 +33,9 @@ export interface ReloadingProps {
      */
     readonly message?: LazyMeta | undefined
 
+    /**
+     * The children.
+     */
     readonly children: ReactNode
 
 }
@@ -57,14 +60,10 @@ export interface LazyOptions {
     readonly onReloading?: OnReloading | undefined
     readonly onError?: OnError | undefined
 
+    readonly defaultMessage?: LazyMeta | undefined
     readonly loadingMessage?: LazyMeta | undefined
     readonly reloadingMessage?: LazyMeta | undefined
     readonly errorMessage?: LazyMeta | undefined
-
-    /**
-     * Hides loading and reloading components for this amount of time.
-     */
-    //readonly delay?: number | undefined
 
 }
 

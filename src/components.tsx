@@ -1,6 +1,7 @@
 
-import { PropsWithChildren, ReactNode, useContext, useEffect, useState } from "react"
+import { PropsWithChildren, ReactNode, useContext, useRef } from "react"
 import { LazyContext } from "./hooks"
+import { useIsFirstMount } from "./internal"
 import { LazyEvent, LazyOverrides, LazySettled } from "./types"
 
 export interface LazyProps<D> {
@@ -11,46 +12,32 @@ export interface LazyProps<D> {
 
 }
 
-export type LazyState<D> = {
-    readonly status: "loading"
-    readonly isLoading: true
-    readonly isSettled: false
-} | {
-    readonly status: "reloading"
-    readonly data: LazySettled<D>
-    readonly isLoading: true
-    readonly isSettled: true
-} | {
-    readonly status: "settled"
-    readonly data: LazySettled<D>
-    readonly isLoading: false
-    readonly isSettled: true
+export type LazyState<D> = ReturnType<typeof useLazyState<D>>
+
+export function usePrevious<T>(value: { readonly current: T } | undefined) {
+    const previous = useRef(value?.current)
+    const first = useIsFirstMount()
+    if (!first) {
+        if (value !== undefined) {
+            previous.current = value.current
+        }
+    }
+    return previous.current
 }
 
-export function useLazyState<D>(newEvent: LazyEvent<D>): LazyState<D> {
-    const [settled, setSettled] = useState<LazySettled<D>>()
-    const event = newEvent
-    useEffect(() => {
-        if (event === undefined) {
-            return
-        }
-        if (event.status === "fulfilled" || event.status === "rejected") {
-            setSettled(event)
-        }
-    }, [
-        event
-    ])
-    if (event.status === "loading") {
+export function useLazyState<D>(current: LazyEvent<D>) {
+    const settled = usePrevious<LazySettled<D>>(current.status === "fulfilled" || current.status === "rejected" ? { current } : undefined)
+    if (current.status === "loading") {
         if (settled === undefined) {
             return {
-                status: "loading",
+                status: "loading" as const,
                 isLoading: true,
                 isSettled: false,
             }
         }
         else {
             return {
-                status: "reloading",
+                status: "reloading" as const,
                 isLoading: true,
                 isSettled: true,
                 data: settled
@@ -58,10 +45,10 @@ export function useLazyState<D>(newEvent: LazyEvent<D>): LazyState<D> {
         }
     }
     return {
-        status: "settled",
+        status: "settled" as const,
         isLoading: false,
         isSettled: true,
-        data: event
+        data: current
     }
 }
 
@@ -73,45 +60,27 @@ export function Lazy<D>(props: LazyProps<D>): ReactNode {
         if (options.onLoading === undefined) {
             return null
         }
-        return options.onLoading({ message: options.loadingMessage })
+        return options.onLoading({
+            message: options.loadingMessage ?? options.defaultMessage
+        })
     }
     const onReloading = options.onReloading ?? ((props: PropsWithChildren) => props.children)
     return onReloading({
         reloading: state.status === "reloading",
-        message: options.reloadingMessage,
+        message: options.reloadingMessage ?? options.defaultMessage,
         children: (() => {
             if (state.data.status === "rejected") {
                 if (options.onError === undefined) {
                     throw state.data.reason
                 }
-                return options.onError({ reason: state.data.reason, message: options.errorMessage })
+                return options.onError({
+                    reason: state.data.reason,
+                    message: options.errorMessage ?? options.defaultMessage,
+                })
             }
             else {
                 return typeof props.children === "function" ? props.children(state.data.value, state) : props.children
             }
-            /*
-            else if (state.status === "reloading") {
-                if (state.data.status === "rejected") {
-                    if (options.onError === undefined) {
-                        throw state.data.reason
-                    }
-                    return options.onError({ reason: state.data.reason, message: options.errorMessage })
-                }
-                else {
-                    return typeof props.children === "function" ? props.children(state.data.value, state) : props.children
-                }
-            }
-            else {
-                if (state.data.status === "rejected") {
-                    if (options.onError === undefined) {
-                        throw state.data.reason
-                    }
-                    return options.onError({ reason: state.data.reason, message: options.errorMessage })
-                }
-                else {
-                    return typeof props.children === "function" ? props.children(state.data.value, state) : props.children
-                }
-            }*/
         })()
     })
 }

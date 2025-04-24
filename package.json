@@ -23,8 +23,8 @@
         "value-or-factory": "^0.0.1"
     },
     "devDependencies": {
-        "@types/react": "^19.0.12",
-        "typescript": "^5.8.2"
+        "@types/react": "^19.1.2",
+        "typescript": "^5.8.3"
     },
     "peerDependencies": {
         "react": "^19.0.0"
