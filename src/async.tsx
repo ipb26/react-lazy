@@ -8,7 +8,7 @@ import { useIsFirstMount } from "./internal"
  * Options for the async hook.
  * @typeParam D The data type.
  */
-export type AsyncOptions<D> = {
+export interface AsyncOptions<D> {
 
     /**
      * A promise or a function that returns a promise. This MUST be memoized - the function will re-run every time a new value is received.
@@ -35,21 +35,15 @@ export type AsyncLazyEvent<D> = LazyEvent<D> & { readonly retry: Retry }
 
 export function useAsyncLazy<D>(input: AsyncOptions<D> | (() => PromiseLike<D>)): AsyncLazyEvent<D> {
     const options = typeof input === "function" ? { promise: input } : input
-    const [state, setResult] = useState<LazyEvent<D>>(options.defer === undefined ? { status: "loading" } : { status: "fulfilled", value: options.defer.initial })
-    const isFirstMount = useIsFirstMount()
-    const retry = useCallback(() => {
-        if (!isFirstMount) {
-            setResult({
-                status: "loading"
-            })
-        }
+    const [event, setEvent] = useState<LazyEvent<D>>(options.defer === undefined ? { status: "loading" } : { status: "fulfilled", value: options.defer.initial })
+    const run = useCallback(() => {
         callOrGet(options.promise).then(value => {
-            setResult({
+            setEvent({
                 status: "fulfilled",
                 value,
             })
         }, reason => {
-            setResult({
+            setEvent({
                 status: "rejected",
                 reason,
             })
@@ -57,16 +51,25 @@ export function useAsyncLazy<D>(input: AsyncOptions<D> | (() => PromiseLike<D>))
     }, [
         options.promise
     ])
+    const retry = useCallback(() => {
+        setEvent({
+            status: "loading"
+        })
+        run()
+    }, [
+        run
+    ])
+    const isFirstMount = useIsFirstMount()
     useEffect(() => {
         if (isFirstMount && options.defer !== undefined) {
             return
         }
-        retry()
+        run()
     }, [
-        retry
+        run
     ])
     return {
-        ...state,
+        ...event,
         retry
     }
 }
