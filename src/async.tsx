@@ -8,7 +8,7 @@ import { useIsFirstMount } from "./internal"
  * Options for the async hook.
  * @typeParam D The data type.
  */
-export interface AsyncOptions<D> {
+export interface AsyncLazyOptions<D> {
 
     /**
      * A promise or a function that returns a promise. This MUST be memoized - the function will re-run every time a new value is received.
@@ -18,11 +18,11 @@ export interface AsyncOptions<D> {
     /**
      * Don't execute immediately.
      */
-    readonly defer?: AsyncDefer<D> | undefined
+    readonly defer?: AsyncLazyDefer<D> | undefined
 
 }
 
-interface AsyncDefer<D> {
+export interface AsyncLazyDefer<D> {
 
     /**
      * The initial value to provide.
@@ -33,7 +33,7 @@ interface AsyncDefer<D> {
 
 export type AsyncLazyEvent<D> = LazyEvent<D> & { readonly retry: Retry }
 
-export function useAsyncLazy<D>(input: AsyncOptions<D> | (() => PromiseLike<D>)): AsyncLazyEvent<D> {
+export function useAsyncLazy<D>(input: AsyncLazyOptions<D> | (() => PromiseLike<D>)): AsyncLazyEvent<D> {
     const options = typeof input === "function" ? { promise: input } : input
     const [event, setEvent] = useState<LazyEvent<D>>(options.defer === undefined ? { status: "loading" } : { status: "fulfilled", value: options.defer.initial })
     const run = useCallback(() => {
@@ -83,7 +83,7 @@ export function useAsyncLazy<D>(input: AsyncOptions<D> | (() => PromiseLike<D>))
 
 export type AsyncLazyState<D> = LazyState<D> & { readonly retry: Retry }
 
-export interface AsyncifiedOptions<D, P> extends AsyncOptions<D>, LazyHOCOptions<AsyncLazyState<D>, P> {
+export interface AsyncifiedOptions<D, P> extends AsyncLazyOptions<D>, LazyHOCOptions<AsyncLazyState<D>, P> {
 }
 
 export function asyncified<I extends {}, D extends {}, P extends {}>(factory: (props: I) => AsyncifiedOptions<D, P>) {
@@ -100,7 +100,7 @@ export function asyncified<I extends {}, D extends {}, P extends {}>(factory: (p
 
 type Retry = () => void
 
-export interface AsyncifiedProps<D> extends AsyncOptions<D> {
+export interface AsyncifiedProps<D> extends AsyncLazyOptions<D> {
 
     readonly children: ValueOrFactory<ReactNode, [D, AsyncLazyState<D>]>
 
