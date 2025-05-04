@@ -61,12 +61,19 @@ export function useAsyncLazy<D>(input: AsyncOptions<D> | (() => PromiseLike<D>))
     ])
     const isFirstMount = useIsFirstMount()
     useEffect(() => {
-        if (isFirstMount && options.defer !== undefined) {
-            return
+        if (isFirstMount) {
+            if (options.defer !== undefined) {
+                return
+            }
+        }
+        else {
+            setEvent({
+                status: "loading"
+            })
         }
         run()
     }, [
-        run
+        run,
     ])
     return {
         ...event,
