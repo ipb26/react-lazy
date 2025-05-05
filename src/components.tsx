@@ -30,6 +30,7 @@ export type LazyState<D> = {
     readonly isLoading: true
     readonly isReloading: false
     readonly isSettled: false
+    readonly isFulfilled: false
     readonly isRejected: false
 } | {
     //readonly status: "reloading"
