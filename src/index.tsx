@@ -4,5 +4,6 @@ export * from "./components"
 export * from "./hoc"
 export * from "./hooks"
 export * from "./observable"
+export * from "./state"
 export * from "./types"
 

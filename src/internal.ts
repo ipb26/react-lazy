@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useRef } from "react"
 
 export function useIsFirstMount() {
     const isFirst = useRef(true)
@@ -9,30 +9,13 @@ export function useIsFirstMount() {
     return isFirst.current
 }
 
-export function useElapsed(ms: number) {
-    const [ready, setReady] = useState(ms === 0)
-    useEffect(() => {
-        if (ms > 0) {
-            if (ready) {
-                setReady(false)
-            }
-            const timer = setTimeout(() => setReady(true), ms)
-            return () => {
-                clearTimeout(timer)
-            }
+export function usePrevious<T>(value: { readonly current: T } | undefined) {
+    const previous = useRef(value?.current)
+    const first = useIsFirstMount()
+    if (!first) {
+        if (value !== undefined) {
+            previous.current = value.current
         }
-        else {
-            setReady(true)
-        }
-    }, [
-        ms
-    ])
-    useEffect(() => {
-        if (ready) {
-            setReady(false)
-        }
-    }, [
-        ready
-    ])
-    return ready
+    }
+    return previous.current
 }

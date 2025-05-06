@@ -1,8 +1,11 @@
 
 import { ReactNode, useEffect, useState } from "react"
 import { Observable, ObservedValueOf } from "rxjs"
-import { lazified, Lazy, LazyEvent, LazyHOCOptions, LazyOverrides, LazyState } from "."
+import { Lazy } from "./components"
+import { LazyHOCOptions, lazified } from "./hoc"
 import { useIsFirstMount } from "./internal"
+import { LazyState } from "./state"
+import { LazyEvent, LazyOverrides } from "./types"
 
 //
 export type ObservableLazyInput = Observable<any>// | Record<string, ObservableInput<any>>

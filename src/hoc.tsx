@@ -1,7 +1,8 @@
 
 import { ComponentType, createElement } from "react"
 import { callOrGet, ValueOrFactory } from "value-or-factory"
-import { Lazy, LazyEvent, LazyOverrides, LazyState } from "."
+import { Lazy, LazyEvent, LazyOverrides } from "."
+import { LazyState } from "./state"
 
 export interface LazyBuilder<D, P> extends LazyHOCOptions<LazyState<D>, P> {
 

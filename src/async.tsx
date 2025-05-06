@@ -1,8 +1,11 @@
 
 import { ReactNode, useCallback, useEffect, useState } from "react"
 import { ValueOrFactory, callOrGet } from "value-or-factory"
-import { Lazy, LazyEvent, LazyHOCOptions, LazyOverrides, LazyState, lazified } from "."
+import { LazyHOCOptions, lazified } from "."
+import { Lazy } from "./components"
 import { useIsFirstMount } from "./internal"
+import { LazyState } from "./state"
+import { LazyEvent, LazyOverrides } from "./types"
 
 /**
  * Options for the async hook.
